@@ -113,7 +113,7 @@ class GraphService:
             name=f"telegram_message_{message_id}",
             episode_body=episode_content,
             source=EpisodeType.text,
-            source_description="Telegram Message",
+            source_description="TowerBot",
             group_id=settings.GROUP_ID,
             reference_time=timestamp,
             entity_types=self.entity_types,
