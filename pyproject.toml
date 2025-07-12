@@ -1,0 +1,20 @@
+[project]
+name = "towerbot"
+version = "1.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apscheduler>=3.11.0",
+    "fastapi[standard]>=0.116.0",
+    "graphiti-core>=0.16.0",
+    "langchain>=0.3.26",
+    "langchain-community>=0.3.27",
+    "langchain-openai>=0.3.27",
+    "langgraph>=0.5.2",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "python-telegram-bot>=22.2",
+    "supabase>=2.16.0",
+    "uvicorn>=0.35.0",
+]
