@@ -10,11 +10,13 @@ from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain.tools.retriever import create_retriever_tool
+from graphiti_core.search.search_filters import SearchFilters
 from langchain_community.vectorstores import SupabaseVectorStore
 
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
 from app.services.database import get_supabase_client
+from app.models.tools import ConnectInputSchema, NodeTypeEnum, EdgeTypeEnum
 
 async def get_jwt_token() -> str:
     """
@@ -171,25 +173,23 @@ def get_tower_info() -> dict[str, Any]:
     return tower_data
 
 
-@tool
-async def get_graph_search_tool(
+@tool("get_connection", args_schema=ConnectInputSchema)
+async def get_connection(
     query: str,
+    edge_types: List[EdgeTypeEnum],
+    node_labels: List[NodeTypeEnum],
 ) -> Any:
-    """
-    Search the knowledge graph using a natural language query.
-
-    Args:
-        query (str): The search query to run against the knowledge graph.
-
-    Returns:
-        Any: The search results from the graph.
-
-    Note:
-        This function currently only supports a single 'query' parameter. 
-        Node label and edge type filtering are not yet implemented in this version.
-    """
     graphiti = get_graphiti_client()
-    return await graphiti.search(query)
+
+    search_filter = SearchFilters(
+        node_labels=node_labels,
+        edge_types=edge_types,
+    )
+
+    return await graphiti.search_(
+        query=query,
+        search_filter=search_filter
+    )
 
 
 def get_qa_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
@@ -201,6 +201,5 @@ def get_qa_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> Lis
 
 def get_connect_tools() -> List[Callable[..., Any]]:
     return [
-        get_tower_communities,
-        get_graph_search_tool,
+        get_connection,
     ]

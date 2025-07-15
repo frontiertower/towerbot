@@ -53,9 +53,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del pending_commands[replied_id]
             return
 
-    await db_service.save_message(update.message)
-    if update.message.chat.type == "supergroup":
-        await graph_service.save_episode(update.message)
+    if settings.APP_ENV == "prod":
+        await db_service.save_message(update.message)
+        if update.message.chat.type == "supergroup":
+            await graph_service.save_episode(update.message)
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ai_service = context.application.bot_data["ai_service"]
@@ -88,7 +89,8 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_to_message_id=update.message.message_id
     )
 
-    await db_service.save_command(update.message, response, command)
+    if settings.APP_ENV == "prod":
+        await db_service.save_command(update.message, response, command)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

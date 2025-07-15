@@ -24,11 +24,11 @@ def get_model(model_type: str):
 
 class AiService:
     def __init__(self):
-        self.qa = None
-        self.connector = None
+        self.qa_agent = None
+        self.connect_agent = None
 
     def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
-        self.qa = create_react_agent(
+        self.qa_agent = create_react_agent(
             name="QA",
             model=llm,
             response_format=QuestionResponse,
@@ -40,39 +40,8 @@ class AiService:
             store=store,
             checkpointer=checkpointer,
         )
-        self.connector = create_react_agent(
-            name="Connect",
-            model=llm,
-            response_format=QuestionResponse,
-            tools=[
-                *get_connect_tools(),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
-            ],
-            store=store,
-            checkpointer=checkpointer,
-        )
-
-class AiService:
-    def __init__(self):
-        self.qa_agent = None
-        self.connect_agent = None
-
-    def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
-        self.qa_agent = create_react_agent(
-            name="TowerBot-QA",
-            model=llm,
-            response_format=QuestionResponse,
-            tools=[
-                *get_qa_tools(llm, embeddings),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
-            ],
-            store=store,
-            checkpointer=checkpointer,
-        )
         self.connect_agent = create_react_agent(
-            name="TowerBot-Connect",
+            name="Connect",
             model=llm,
             response_format=QuestionResponse,
             tools=[
@@ -108,5 +77,4 @@ class AiService:
             config=config
         )
 
-        # print(response["messages"][-1].content)
         return response["structured_response"]
