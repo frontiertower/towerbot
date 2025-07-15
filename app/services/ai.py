@@ -60,7 +60,7 @@ class AiService:
 
     def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
         self.qa_agent = create_react_agent(
-            name="TowerBot-QA",
+            name="QA",
             model=llm,
             response_format=QuestionResponse,
             tools=[
@@ -72,7 +72,7 @@ class AiService:
             checkpointer=checkpointer,
         )
         self.connect_agent = create_react_agent(
-            name="TowerBot-Connect",
+            name="Connect",
             model=llm,
             response_format=QuestionResponse,
             tools=[
