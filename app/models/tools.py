@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 class NodeTypeEnum(str, Enum):
@@ -17,5 +17,11 @@ class EdgeTypeEnum(str, Enum):
 
 class ConnectInputSchema(BaseModel):
     """Connect two nodes"""
-    node_labels: List[NodeTypeEnum] = Field(description="Array of node types, e.g. ['User', 'Floor']")
-    edge_types: List[EdgeTypeEnum] = Field(description="Array of edge types, e.g. ['WorksOn', 'Attends']")
+    node_labels: Optional[List[NodeTypeEnum]] = Field(
+        default=None,
+        description="Array of node types, e.g. ['User', 'Floor']"
+    )
+    edge_types: Optional[List[EdgeTypeEnum]] = Field(
+        default=None,
+        description="Array of edge types, e.g. ['WorksOn', 'Attends']"
+    )
