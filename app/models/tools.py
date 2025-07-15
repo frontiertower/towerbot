@@ -16,12 +16,23 @@ class EdgeTypeEnum(str, Enum):
     InterestedIn = "InterestedIn"
 
 class ConnectInputSchema(BaseModel):
-    """Connect two nodes"""
-    node_labels: Optional[List[NodeTypeEnum]] = Field(
-        default=None,
-        description="Array of node types, e.g. ['User', 'Floor']"
+    """
+    Schema for connecting two nodes in the graph.
+
+    Attributes:
+        query (str): The query to search the graph.
+        edge_types (Optional[List[EdgeTypeEnum]]): Array of edge types, e.g. ['WorksOn', 'Attends'].
+        node_labels (Optional[List[NodeTypeEnum]]): Array of node types, e.g. ['User', 'Floor'].
+    """
+    query: str = Field(
+        ...,
+        description="The query to search the graph"
     )
     edge_types: Optional[List[EdgeTypeEnum]] = Field(
         default=None,
         description="Array of edge types, e.g. ['WorksOn', 'Attends']"
+    )
+    node_labels: Optional[List[NodeTypeEnum]] = Field(
+        default=None,
+        description="Array of node types, e.g. ['User', 'Floor']"
     )
