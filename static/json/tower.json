@@ -1,0 +1,669 @@
+{
+  "frontierTower": {
+    "wiki": {
+      "title": "Citizen Wiki",
+      "mainSections": [
+        "Frontier Tower",
+        "Activities",
+        "Floor Directory"
+      ],
+      "activities": {
+        "lumaEventsUrl": "https://lu.ma/frontiertower",
+        "internshipBulletinBoardUrl": "https://docs.google.com/spreadsheets/d/102CjhukO9lo2glZBcSO2VA9PSu5yp0WnWWUOcGo04RU/edit?usp=sharing",
+        "maintenanceRequestFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUi-dOXELvdssT7vw7zst5cZvfn9qyQm17BTuHsPoD6xON7g/viewform?usp=dialog",
+        "bountyBoardUrl": "https://docs.google.com/spreadsheets/d/1W2spsKx3em-KnhRbI-q6T4zzh-FIZdXf4iAd2lA5zpE/edit?usp=sharing"
+      }
+    },
+    "generalInfo": {
+      "walkthrough": {
+        "videoUrl": "https://www.loom.com/share/5c125d98000f4d129d1dc8aa613c8974"
+      },
+      "directory": [
+        {
+          "name": "John",
+          "jobTitle": "Front Desk",
+          "number": "14157568544",
+          "telegram": "@FrontDeskJohn",
+          "responsibilities": "Access to bike storage area and garage access."
+        }
+      ],
+      "socials": {
+        "x": "https://x.com/frontiertower",
+        "linkedIn": "https://www.linkedin.com/company/berlinhouse",
+        "telegram": "https://t.me/+M0KxFTd3LnJkNzky",
+        "instagram": "https://www.instagram.com/berlinhouse_sf"
+      },
+      "missionVisionValues": {
+        "mission": "Our mission at Carted is to connect shoppers around the world to every product on the planet \u2014 however they like to shop. Through our API, we empower developers to build amazing commerce experiences into any web or native app, on any device.",
+        "vision": "Carted is building the next generation of ecommerce to fix the fractured experiences shoppers face today. Carted provides the infrastructure that allows for the seamless integration of commerce into relevant contextual experiences for shoppers\u2014for example, social commerce, conversational commerce, voice shopping, live shopping, and more. The Carted API empowers developers and platforms to make commerce seamless by connecting them to millions ofmerchants and billions of products with a single integration. API customers focus on building their dream user experience and rely on Carted to provide the solid infrastructure that meets their commerce needs. Carted also plans to build on top of its own API to create delightful shopping experiences. In the future, shoppers will trust the Carted brand to provide a wide range of products with a reliable and personalized service.",
+        "values": [
+          {
+            "name": "Skip the sauce",
+            "description": "Act with integrity. Do what you say you'll do, and don't do what you say you won't do, simple as that. Follow through on commitments and communicate clearly: no fluff, no sauce, all substance."
+          },
+          {
+            "name": "Keep it moving",
+            "description": "Act and adjust rather than getting stuck in analysis paralysis. Take pragmatic risks to strive for progress over perfection. Push for efficiency and aim to fail forward. Have a growth mindset and use mistakes as opportunities to learn and improve for the next time."
+          },
+          {
+            "name": "Back the customer",
+            "description": "Solve real problems for real people. Build trust by using your knowledge to empower and encourage customers. Start with 'why' to understand the broader context, not just one moment for one customer. Respect customers' time by simplifying complex ideas and actions."
+          },
+          {
+            "name": "In it together",
+            "description": "We're great individually but better together. Diverse perspectives and teamwork unlock our superpowers to make anything possible. Respect each other and seek first to understand. Everyone should feel safe to share knowledge freely and without ego. Good ideas can come from anyone."
+          },
+          {
+            "name": "Embrace Mondays",
+            "description": "Turn up because you have a passion for what you do and take pride in your work. Stay hungry and motivated by challenges. Dream big, innovate, and have fun in the process."
+          }
+        ]
+      },
+      "faqs": {
+        "categories": [
+          {
+            "name": "Building Access & Basics",
+            "questions": [
+              {
+                "question": "What are the building hours?",
+                "answer": "The building is accessible to members 24/7 with UniFi access."
+              },
+              {
+                "question": "What is the Wi-Fi password?",
+                "answer": "Network Name: Frontier Tower, Password: frontiertower995"
+              },
+              {
+                "question": "How do I get UniFi Access?",
+                "answer": "Contact Xenofon for UniFi Access."
+              },
+              {
+                "question": "Am I allowed to bring in guests?",
+                "answer": "Guests are allowed, but they must be accompanied by a member."
+              }
+            ]
+          },
+          {
+            "name": "Facilities & Maintenance",
+            "questions": [
+              {
+                "question": "Where is the bike storage?",
+                "answer": "Bike storage is temporarily located in the hallway leading to the trash room. Contact John to gain access for the back door."
+              },
+              {
+                "question": "Where is the trash room?",
+                "answer": "Trash room is located in the back of the building. Access the back from the lobby. Contact John to gain access for the back door."
+              },
+              {
+                "question": "Where is the freight elevator?",
+                "answer": "The freight elevator is located at the back of the tower near the trash room. It can be accessed through the lobby. Contact John if you need access to the back door."
+              },
+              {
+                "question": "How do I report or request a maintenance issue?",
+                "answer": "Please use the Maintenance Request Form in the Citizen Wiki under Activities."
+              }
+            ]
+          },
+          {
+            "name": "New Members & Floor Support",
+            "questions": [
+              {
+                "question": "I\u2019m a new member. Where should I start?",
+                "answer": "Start with watching the Building Onboarding Walkthrough Video. After that, visit your designated floor in the Citizen Wiki. It covers the onboarding process, space usage, community guidelines, booking systems, and who to contact for support."
+              },
+              {
+                "question": "How do I contact my floor lead?",
+                "answer": "Each floor page lists the floor lead\u2019s contact information."
+              }
+            ]
+          },
+          {
+            "name": "Events & Bookings",
+            "questions": [
+              {
+                "question": "Where can I see upcoming events, workshops, or programs?",
+                "answer": "Visit the Master List of Tower Events to check all upcoming events happening in the tower."
+              },
+              {
+                "question": "How do I book event space?",
+                "answer": "Book event space through the dashboard at www.berlinhouse.com. Make sure to review the space usage guidelines before submitting your request."
+              }
+            ]
+          },
+          {
+            "name": "Shared Amenities",
+            "questions": [
+              {
+                "question": "Where can I find quiet spaces for calls or meetings?",
+                "answer": "Each floor has designated phone booths."
+              },
+              {
+                "question": "Where do I get supplies for kitchen and washroom?",
+                "answer": "Paper towels and toilet paper can be found in the basement."
+              },
+              {
+                "question": "Where is the Lost & Found?",
+                "answer": "The Lost & Found is located on the 15th floor by the kitchen. Look for the designated rack near the counter area."
+              }
+            ]
+          }
+        ]
+      },
+      "sanitationGuidelines": {
+        "guidelineImages": [
+          {
+            "type": "Compost",
+            "description": "Infographic on what to place in the green compost bin, including soiled paper, food scraps, food packaging, coffee, and tea. Prohibits glass and plastic bags.",
+            "fileName": "Letter_Size.jpg"
+          },
+          {
+            "type": "Recycle",
+            "description": "Infographic on what to recycle, including paper/cardboard, plastic, metal, and glass. Prohibits food scraps and liquids.",
+            "fileName": "Letter_Size_(1).jpg"
+          },
+          {
+            "type": "Landfill",
+            "description": "Infographic on what goes in the gray landfill bin, including plastic wrappers, broken items, personal hygiene products, non-recyclable containers, and styrofoam. Prohibits food scraps, recyclable material, and hazardous material.",
+            "fileName": "Letter_Size_(1) 1.jpg"
+          },
+          {
+            "type": "Container Info",
+            "description": "Information on Recology Golden Gate rear loader truck containers, showing dimensions for 1, 2, and 1.5-yard rear loaders.",
+            "fileName": "Letter_Size_(2).jpg"
+          },
+          {
+            "type": "No Food Zone",
+            "description": "Sign indicating 'NO FOOD Beyond this point'.",
+            "fileName": "Untitled.png"
+          },
+          {
+            "type": "No Eating on Furniture",
+            "description": "Sign indicating 'NO EATING ON THE FURNITURE'.",
+            "fileName": "Untitled 1.png"
+          },
+          {
+            "type": "Shoes Off Zone",
+            "description": "Sign indicating 'SHOES OFF ZONE. Please remove your shoes before entering.'",
+            "fileName": "Shoes_Off.png"
+          },
+          {
+            "type": "Quiet Zone",
+            "description": "Sign indicating 'SUPER QUIET ZONE. This is a silent work zone. Take calls and conversations outside - thank you!'.",
+            "fileName": "Quiet_Zone.jpg"
+          },
+          {
+            "type": "Hot Desk",
+            "description": "Sign indicating 'HOT DESK AVAILABLE. Open seating. First come, first served. Feel free to plug in and get to work!'.",
+            "fileName": "Hot_Desk.png"
+          },
+          {
+            "type": "Cleanup Notice",
+            "description": "Sign requesting to call 415.543.5223 if graffiti or pee/poo is seen in front of the door.",
+            "fileName": "Hot_Desk 1.png"
+          }
+        ]
+      }
+    },
+    "floors": [
+      {
+        "floor": 1,
+        "name": "Lobby",
+        "frontDeskContact": {
+          "name": "John",
+          "number": "+1 4157568544",
+          "telegram": "@FrontDeskJohn"
+        },
+        "notes": "Please contact John to access the bike storage area and garage access."
+      },
+      {
+        "floor": 2,
+        "name": "Spaceship"
+      },
+      {
+        "floor": 3,
+        "name": "Private Offices",
+        "details": {
+          "floorPlanImage": "image.jpg",
+          "notes": "Floor plan shows various office sizes (e.g., 1K, 1.2K, 1.5K, 1.7K, 1.8K, 1.9K, 2K, 2.5K, 4K), conference rooms, a kitchen, a gym, and a vacant suite 300. Text indicates prices are for unfurnished spaces and do not include citizenship."
+        }
+      },
+      {
+        "floor": 4,
+        "name": "Robotics",
+        "leads": [
+          {
+            "name": "Xenia",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Vitaly",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ],
+        "mission": "Show the real picture of robotics - not the hype, not the dystopia, but the messy, exciting, imperfect reality of building intelligent machines that coexist with us.",
+        "services": {
+          "core": [
+            "Co-working and private offices",
+            "Research & Testing Ground with a Unitree G1 humanoid robot, soldering workshop, and unstructured environments.",
+            "Workshops & Build Days",
+            "Company Engagements (demos, pilot deployments, sponsorships)",
+            "Events & Talks"
+          ],
+          "comingSoon": [
+            "Showrooms for vertical-specific robotics",
+            "Lockers and lab memberships",
+            "Content & Media Production studio"
+          ]
+        },
+        "collaborationLinks": {
+          "becomeMember": "https://berlinhouse.com/membership?referral_code=7TZ57L2J",
+          "upcomingEvents": "https://lu.ma/cyberpunklab",
+          "bookTime": "https://calendar.notion.so/meet/vitl2907/cyberpunk-lab"
+        }
+      },
+      {
+        "floor": 5,
+        "name": "Frontier Fitness Center",
+        "status": "Operating in a temporary studio facility on Floor 3 during renovation of Floor 5.",
+        "leaders": [
+          {
+            "name": "Stedman Halliday",
+            "email": "stedman.rh@gmail.com",
+            "telegram": "https://t.me/stedmanhalliday",
+            "x": "https://x.com/stedmanhalliday",
+            "linkedIn": "https://linkedin.com/in/stedmanhalliday"
+          }
+        ],
+        "eventsCalendar": "https://lu.ma/frontierfitnesscenter",
+        "mission": {
+          "communityImpact": "Offer instrumental, informational, and social support for the entire Frontier Tower community to live active, healthy lifestyles that fuel global performance gains. Motivate members to transcend perceived limits. Establish an active performance lab for longevity and biohacking communities.",
+          "roadmap": {
+            "phase1": "Community gym: A space for the members to move.",
+            "phase2": "Wellness center: A place for living well together.",
+            "phase3": "Fitness frontier: Experiments and integrated tech."
+          }
+        },
+        "membership": {
+          "openGymAccess": "Free for all Frontier Tower citizens.",
+          "events": "Many are free, some may require a ticket.",
+          "privateRentals": "Contact a gym leader for pricing."
+        },
+        "rules": [
+          "All equipment is for shared use during open gym blocks.",
+          "Do not remove anything from the space without permission from a Gym Leader.",
+          "Respect the space: lower weights with control, rerack weights, no shoes on mats, sanitize equipment after use, no food and only closed container beverages.",
+          "Respect others: follow gym etiquette, don't hog equipment, no harassment.",
+          "Filming for personal evaluation is allowed; ask for consent from others in the area. Talk to a Gym Leader for content production filming."
+        ],
+        "waiverRequired": "All use of the space is subject to the Frontier Fitness Center Liability Waiver.",
+        "inventory": {
+          "cardio": [
+            "treadmill"
+          ],
+          "compoundStrength": [
+            "squat stand with accessories",
+            "olympic barbell",
+            "bumper plates",
+            "barbell clamps",
+            "bench",
+            "lifting belt"
+          ],
+          "freeWeights": [
+            "25 lb kettlebell",
+            "20 lb dumbbells",
+            "plastic dumbbell handles with plates and collars",
+            "bench (2)"
+          ],
+          "functional": [
+            "tib bar with plate and collars",
+            "resistance bands with handles and door anchor",
+            "ab wheel",
+            "slant board"
+          ],
+          "calisthenics": [
+            "push up handles",
+            "dip and pull-up stand",
+            "Basebar"
+          ],
+          "balance": [
+            "Whirlyboard",
+            "slackline balance board",
+            "Bosu ball"
+          ],
+          "recovery": [
+            "Aletha Range",
+            "massage balls",
+            "shiatsu ball neck massager",
+            "shakti mat and pillow",
+            "Theracane Max",
+            "foam rollers"
+          ],
+          "mobility": [
+            "yoga mats",
+            "foam yoga blocks",
+            "cork yoga blocks",
+            "exercise mats",
+            "metal pole",
+            "rollout mats"
+          ]
+        }
+      },
+      {
+        "floor": 6,
+        "name": "Arts & Music",
+        "leads": [
+          {
+            "name": "Scott",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Alaska",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ]
+      },
+      {
+        "floor": 7,
+        "name": "Frontier Makerspace",
+        "status": "Under construction. Will serve as headquarters for Deep Tech Week.",
+        "leads": [
+          {
+            "name": "Anna Hollingsworth",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Andrew Cot\u00e9",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Tony Loehr",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ],
+        "membership": {
+          "base": "All Berlinhouse members get basic access. No added cost to designate as primary floor for more perks.",
+          "foundingCitizen": "$150/month (billed annually).",
+          "citizen": "$190/month (billed monthly).",
+          "dedicatedDesk": "Additional $80/month, subject to availability."
+        },
+        "perksForPrimaryMembers": [
+          "Unlimited use of high-end fabrication equipment",
+          "Discounted consumables",
+          "Event & hackathon hosting privileges",
+          "Discounted sushi lunches",
+          "Project spotlights",
+          "Teaching and mentorship opportunities"
+        ],
+        "equipment": {
+          "fabrication": [
+            "CO2 and Diode laser cutters",
+            "FDM and resin 3D printers",
+            "CNC mill & pick-and-place machines",
+            "Surface-mount prototyping tools",
+            "Electronics lab",
+            "Sewing & textile equipment",
+            "General hand tools"
+          ],
+          "community": [
+            "Hardware-focused Discord server",
+            "Consulting",
+            "Hack nights, guest speakers, etc."
+          ]
+        },
+        "rules": [
+          "Respect tools, space, and others.",
+          "Clean up after yourself.",
+          "Training required for advanced tools.",
+          "After-hours access is limited.",
+          "Zero-tolerance for harassment or discrimination."
+        ],
+        "newMemberOnboarding": [
+          "Welcome tour and safety orientation",
+          "Discord and mailing list access",
+          "Tool certifications",
+          "Meeting with a floor lead",
+          "Invitation to member-only events"
+        ]
+      },
+      {
+        "floor": 8,
+        "name": "Biotech",
+        "status": "The Biopunk Lab is a constant experiment.",
+        "leads": [
+          {
+            "name": "Morgan Hough",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Elliot Roth",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ],
+        "communications": [
+          "Discord",
+          "Telegram",
+          "Notion Website",
+          "Luma Calendar"
+        ]
+      },
+      {
+        "floor": 9,
+        "name": "Artificial Intelligence",
+        "description": "All Inclusive (AI) floor at the Frontier Tower. A growing space of intelligence, learning, and shared discovery.",
+        "leads": [
+          {
+            "name": "Kelly Carson",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Clovis",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Devinder",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ],
+        "conciergeUrl": "https://prod-concierge.webwisdom.ai/?wisdomId=concierge-NjAyOWRmZjBhNmZhOWY2YTAxNTNiNGIwMmE3Y2ViMzUtaHR0cHM6Ly9zaHJ1Yi1zdGVwLTYzNS5ub3Rpb24uc2l0ZQ%3D%3D",
+        "pricing": "All inclusive with Tower Citizenship!",
+        "rules": [
+          "Dirty dishes go in the dishwasher",
+          "Desks are ephemeral occupancy"
+        ],
+        "futureEquipment": "tinybox from tinygrad.org",
+        "onboarding": {
+          "discord": "https://discord.gg/89xXseBV",
+          "volunteerLiaisons": [
+            {
+              "name": "Clovis",
+              "telegram": "@Clo_ve"
+            },
+            {
+              "name": "JL",
+              "telegram": "@b4lisong"
+            },
+            {
+              "name": "Devinder",
+              "telegram": "@DevSodhirao"
+            },
+            {
+              "name": "Daniela"
+            },
+            {
+              "name": "Tom",
+              "telegram": "@Tom_Voltz"
+            },
+            {
+              "name": "Kelly",
+              "telegram": "@kellyjokes"
+            }
+          ]
+        }
+      },
+      {
+        "floor": 10,
+        "name": "Frontier@Accelerate",
+        "description": "A community of experienced founders, top investors, and talented builders working together to accelerate the frontier of technology.",
+        "location": "Floor 10, Frontier Tower, 995 Market St, San Francisco, CA 94103",
+        "leads": [
+          {
+            "name": "Chyna",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Bayley",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ],
+        "valueProposition": {
+          "forFounders": [
+            "Connect with top-tier VCs",
+            "Your SF landing pad-with access to meeting rooms, day offices, and more"
+          ],
+          "forVCs": [
+            "Engage with high-caliber startups through meaningful, informal conversations",
+            "Build your Silicon Valley presence and support your portfolio on the ground"
+          ]
+        },
+        "features": [
+          "A landing pad in SF for non-local teams",
+          "A space to build, collaborate, and grow",
+          "Access to top-tier VCs",
+          "Bookable meeting rooms and day offices"
+        ]
+      },
+      {
+        "floor": 11,
+        "name": "Health & Longevity",
+        "leads": [
+          {
+            "name": "Laurence",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ]
+      },
+      {
+        "floor": 12,
+        "name": "Ethereum & Decentralized Tech",
+        "leads": [
+          {
+            "name": "Mia D.",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Gokhan",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ]
+      },
+      {
+        "floor": 14,
+        "name": "Human Flourishing",
+        "leads": [
+          {
+            "name": "Ming He",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          },
+          {
+            "name": "Carson Kelly",
+            "contact": [
+              "Email",
+              "Telegram",
+              "X (Twitter)",
+              "LinkedIn"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

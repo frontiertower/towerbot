@@ -117,7 +117,7 @@ NEO4J_URI=your-neo4j-uri
 NEO4J_USER=your-neo4j-user
 PORT=3000
 REASONING_MODEL=your-azure-reasoning-model
-SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 SUPABASE_URL=your-supabase-url
 WEBHOOK_URL=https://your-server-url
 ```

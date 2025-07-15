@@ -1,9 +1,13 @@
+import json
+
+from typing import List
 from datetime import timezone
 
 from telegram import Message
 from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
 from graphiti_core.nodes import EpisodeType
+from graphiti_core.utils.bulk_utils import RawEpisode
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
 from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
@@ -69,14 +73,21 @@ class GraphService:
     def __init__(self):
         self.graphiti: Graphiti | None = None
         self.entity_types = {"User": User, "Floor": Floor, "Event": Event, "Interest": Interest, "Project": Project}
-        self.edge_types = {"LOCATED_ON": LocatedOn, "WORKS_ON": WorksOn, "ATTENDS": Attends, "INTERESTED_IN": InterestedIn}
+        self.edge_types = {
+            "LocatedOn": LocatedOn,
+            "WorksOn": WorksOn,
+            "Attends": Attends,
+            "InterestedIn": InterestedIn,
+        }
         self.edge_type_map = {
-            ("User", "Event"): ["ATTENDS"],
-            ("User", "Floor"): ["LOCATED_ON"],
-            ("Event", "Floor"): ["LOCATED_ON"],
-            ("Project", "Floor"): ["LOCATED_ON"],
-            ("User", "Interest"): ["INTERESTED_IN"],
-            ("User", "Project"): ["WORKS_ON", "INTERESTED_IN", "LOCATED_ON"],
+            ("User", "Event"): ["Attends"],
+            ("User", "Floor"): ["LocatedOn"],
+            ("Event", "Floor"): ["LocatedOn"],
+            ("Project", "Floor"): ["LocatedOn"],
+            ("User", "Interest"): ["InterestedIn"],
+            ("User", "Project"): ["WorksOn"],
+            ("Event", "Interest"): ["InterestedIn"],
+            ("Entity", "Entity"): ["RelatesTo"],
         }
 
     async def connect(self):
@@ -85,39 +96,46 @@ class GraphService:
             await clear_data(self.graphiti.driver)
             await self.graphiti.build_indices_and_constraints()
 
+    async def close(self):
+        await self.graphiti.close()
+
     async def build_communities(self):
         if settings.APP_ENV == "prod":
             await self.graphiti.build_communities()
 
     async def save_episode(self, message: Message):
-        channel_name = "general"
-        user_info = message.from_user
-
-        try:
-            name = message.reply_to_message.forum_topic_created.name
-            if name:
-                channel_name = name
-        except AttributeError:
-            pass
-
-        message_text = message.text
-        message_id = message.message_id
-        timestamp = message.date.astimezone(timezone.utc)
-
-        episode_content = (
-            f"User {user_info.first_name} (user_id: {user_info.id}, username: {user_info.username}) "
-            f"posted in the '{channel_name}' channel: '{message_text}'"
-        )
-
         await self.graphiti.add_episode(
-            name=f"telegram_message_{message_id}",
-            episode_body=episode_content,
-            source=EpisodeType.text,
+            name=f"telegram_message_{message.message_id}",
+            episode_body=json.dumps(message, default=str),
+            source=EpisodeType.json,
             source_description="TowerBot",
+            reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
-            reference_time=timestamp,
             entity_types=self.entity_types,
             edge_types=self.edge_types,
             edge_type_map=self.edge_type_map,
             update_communities=True,
         )
+
+    async def save_episodes(self, messages: List[Message], batch_size: int = 10):
+        for i in range(0, len(messages), batch_size):
+            batch = messages[i:i + batch_size]
+            
+            bulk_episodes = [
+                RawEpisode(
+                    name=f"telegram_message_{message.get('message_id', 'unknown')}",
+                    content=json.dumps(message, default=str),
+                    source=EpisodeType.json,
+                    source_description="TowerBot",
+                    reference_time=message.date.astimezone(timezone.utc),
+                )
+                for message in batch
+            ]
+            
+            await self.graphiti.add_episode_bulk(
+                bulk_episodes, 
+                group_id=settings.GROUP_ID, 
+                entity_types=self.entity_types, 
+                edge_types=self.edge_types, 
+                edge_type_map=self.edge_type_map
+            )

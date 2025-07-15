@@ -1,3 +1,5 @@
+import os
+import json
 import httpx
 
 from datetime import datetime
@@ -11,6 +13,7 @@ from langchain.tools.retriever import create_retriever_tool
 from langchain_community.vectorstores import SupabaseVectorStore
 
 from app.core.config import settings
+from app.services.graph import get_graphiti_client
 from app.services.database import get_supabase_client
 
 async def get_jwt_token() -> str:
@@ -150,13 +153,54 @@ async def get_tower_communities() -> Optional[dict[str, Any]]:
     except httpx.RequestError as e:
         raise Exception(f"API Request Error: {e}") from e
 
+@tool
+def get_tower_info() -> dict[str, Any]:
+    """
+    Retrieve detailed information about the Frontier Towner building.
+
+    This tool loads and returns the contents of 'tower.json', which contains comprehensive data about the building,
+    including amenities, facilities, floor plans, and other relevant details. Use this tool to answer questions
+    about the building's features, resources, or layout.
+
+    Returns:
+        dict[str, Any]: A dictionary containing all available information about the Frontier Towner building.
+    """
+    json_path = os.path.join(os.path.dirname(__file__), '../../static/json/tower.json')
+    with open(json_path, 'r', encoding='utf-8') as f:
+        tower_data = json.load(f)
+    return tower_data
+
+
+@tool
+async def get_graph_search_tool(
+    query: str,
+) -> Any:
+    """
+    Search the knowledge graph using a natural language query.
+
+    Args:
+        query (str): The search query to run against the knowledge graph.
+
+    Returns:
+        Any: The search results from the graph.
+
+    Note:
+        This function currently only supports a single 'query' parameter. 
+        Node label and edge type filtering are not yet implemented in this version.
+    """
+    graphiti = get_graphiti_client()
+    return await graphiti.search(query)
+
 
 def get_qa_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
     return [
+        get_tower_info,
         get_calendar_events_tool(llm),
         get_notion_database_tool(embeddings),
-        get_tower_communities,
     ]
 
 def get_connect_tools() -> List[Callable[..., Any]]:
-    return [get_tower_communities]
+    return [
+        get_tower_communities,
+        get_graph_search_tool,
+    ]

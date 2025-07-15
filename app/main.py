@@ -1,6 +1,7 @@
 import logging
 
 from telegram import Update
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks
 
 from app.core.lifespan import lifespan
@@ -14,6 +15,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TowerBot", lifespan=lifespan)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 async def process_telegram_update(tg_app, update_data):
     update = Update.de_json(data=update_data, bot=tg_app.bot)
