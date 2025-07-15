@@ -44,7 +44,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             command = pending["command"]
             text_after_command = update.message.text.strip()
             ai_service = context.application.bot_data["ai_service"]
-            response = await ai_service.run_agent(text_after_command, update.message.from_user.id)
+            response = await ai_service.run(command, text_after_command, update.message.from_user.id)
             await update.message.reply_text(
                 response.answer,
                 reply_to_message_id=update.message.message_id
