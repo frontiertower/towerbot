@@ -108,5 +108,4 @@ class AiService:
             config=config
         )
 
-        # print(response["messages"][-1].content)
         return response["structured_response"]
