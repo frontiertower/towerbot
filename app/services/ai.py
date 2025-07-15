@@ -24,37 +24,6 @@ def get_model(model_type: str):
 
 class AiService:
     def __init__(self):
-        self.qa = None
-        self.connector = None
-
-    def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
-        self.qa = create_react_agent(
-            name="QA",
-            model=llm,
-            response_format=QuestionResponse,
-            tools=[
-                *get_qa_tools(llm, embeddings),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
-            ],
-            store=store,
-            checkpointer=checkpointer,
-        )
-        self.connector = create_react_agent(
-            name="Connect",
-            model=llm,
-            response_format=QuestionResponse,
-            tools=[
-                *get_connect_tools(),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
-            ],
-            store=store,
-            checkpointer=checkpointer,
-        )
-
-class AiService:
-    def __init__(self):
         self.qa_agent = None
         self.connect_agent = None
 
