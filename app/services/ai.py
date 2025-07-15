@@ -24,12 +24,12 @@ def get_model(model_type: str):
 
 class AiService:
     def __init__(self):
-        self.qa_agent = None
-        self.connect_agent = None
+        self.qa = None
+        self.connect = None
 
     def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
-        self.qa_agent = create_react_agent(
-            name="TowerBot-QA",
+        self.qa = create_react_agent(
+            name="QA",
             model=llm,
             response_format=QuestionResponse,
             tools=[
@@ -40,8 +40,8 @@ class AiService:
             store=store,
             checkpointer=checkpointer,
         )
-        self.connect_agent = create_react_agent(
-            name="TowerBot-Connect",
+        self.connect = create_react_agent(
+            name="Connect",
             model=llm,
             response_format=QuestionResponse,
             tools=[
@@ -54,7 +54,7 @@ class AiService:
         )
 
     async def run(self, command: str, message: str, user_id: int):
-        agent = self.qa_agent if command == "ask" else self.connect_agent
+        agent = self.qa if command == "ask" else self.connect
 
         if not agent:
             raise RuntimeError("Agent not initialized. Call connect() on startup.")
