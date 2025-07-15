@@ -1,7 +1,7 @@
-import os
 import json
 import httpx
 
+from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any, Callable, List, Optional
@@ -167,8 +167,10 @@ def get_tower_info() -> dict[str, Any]:
     Returns:
         dict[str, Any]: A dictionary containing all available information about the Frontier Towner building.
     """
-    json_path = os.path.join(os.path.dirname(__file__), '../../static/json/tower.json')
-    with open(json_path, 'r', encoding='utf-8') as f:
+    project_root = Path(__file__).resolve().parent.parent.parent
+    json_file_path = project_root / "static" / "json" / "tower.json"
+
+    with open(json_file_path, 'r', encoding='utf-8') as f:
         tower_data = json.load(f)
     return tower_data
 
