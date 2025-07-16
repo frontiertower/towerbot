@@ -7,7 +7,7 @@ from langmem import create_manage_memory_tool, create_search_memory_tool
 from app.core.config import settings
 from app.core.constants import SYSTEM_PROMPT
 from app.models.responses import QuestionResponse
-from app.core.tools import get_qa_tools, get_connect_tools
+from app.core.tools import get_ask_tools, get_connect_tools
 
 def get_model(model_type: str):
     if model_type == "model":
