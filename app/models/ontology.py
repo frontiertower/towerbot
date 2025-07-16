@@ -21,7 +21,8 @@ class Event(BaseModel):
     """An event, meeting, or activity scheduled within the Frontier Tower."""
     title: str = Field(description="Title or name of the event.")
     description: Optional[str] = Field(None, description="Detailed description of the event.")
-    start_time: str = Field(
+    start_time: Optional[str] = Field(
+        None,
         description="Start time of the event as an ISO 8601 string, e.g., '2024-06-01T10:00:00Z'."
     )
     end_time: Optional[str] = Field(
@@ -53,8 +54,8 @@ class LocatedOn(BaseModel):
 class WorksOn(BaseModel):
     """Represents a user's involvement in organizing or supporting a project or event."""
     role: Optional[str] = Field(None, description="Role of the user in the event, e.g., 'Speaker', 'Volunteer'.")
-    assigned_at: str = Field(
-        ...,
+    assigned_at: Optional[str] = Field(
+        None,
         description="When the user was assigned to the event, as an ISO 8601 string."
     )
 
@@ -68,7 +69,7 @@ class Attends(BaseModel):
 
 class InterestedIn(BaseModel):
     """Links a user or event to an area of interest."""
-    expressed_at: str = Field(
-        ...,
+    expressed_at: Optional[str] = Field(
+        None,
         description="When the interest was expressed, as an ISO 8601 string."
     )
