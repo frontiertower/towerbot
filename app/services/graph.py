@@ -95,29 +95,28 @@ class GraphService:
         if settings.APP_ENV == "prod":
             await self.graphiti.build_communities()
 
-    def create_message_summary(self, message: Message) -> str:
+    def create_conversational_body(self, message: Message) -> str:
         sender_name = message.from_user.first_name or message.from_user.username or ""
         message_text = message.text or ""
 
         if message.reply_to_message:
             original_msg = message.reply_to_message
             original_sender = original_msg.from_user.first_name or original_msg.from_user.username or ""
-            original_text = (original_msg.text or "...")[:150]
+            original_text = original_msg.text or "..."
 
             return (
-                f"{sender_name} replied to {original_sender}.\n\n"
-                f"Reply: \"{message_text}\"\n\n"
-                f"Original Post (from {original_sender}): \"{original_text}...\""
+                f"{original_sender}: {original_text}\n"
+                f"{sender_name}: {message_text}"
             )
         
-        return f"{sender_name} wrote: \"{message_text}\""
+        return f"{sender_name}: {message_text}"
 
     async def save_episode(self, message: Message):
-        message_summary = self.create_message_summary(message)
+        conversational_body = self.create_conversational_body(message)
 
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
-            episode_body=message_summary,
+            episode_body=conversational_body,
             source=EpisodeType.message,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
