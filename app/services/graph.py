@@ -26,7 +26,7 @@ def get_graphiti_client():
     neo4j_user = settings.NEO4J_USER
     neo4j_password = settings.NEO4J_PASSWORD
 
-    llm_small_model = settings.MODEL
+    llm_small_model = settings.RERANKER_MODEL
     llm_model = settings.MODEL
     embedding_model = settings.EMBEDDING_MODEL
 
@@ -63,7 +63,7 @@ def get_graphiti_client():
         ),
         cross_encoder=OpenAIRerankerClient(
             config=LLMConfig(
-                model=llm_small_model
+                model=azure_llm_config.small_model
             ),
             client=llm_client_azure
         )
