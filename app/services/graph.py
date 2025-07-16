@@ -106,7 +106,7 @@ class GraphService:
     async def save_episode(self, message: Message):
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
-            episode_body=json.dumps(message, default=str),
+            episode_body=str(message),
             source=EpisodeType.json,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
@@ -117,14 +117,14 @@ class GraphService:
             update_communities=True,
         )
 
-    async def save_episodes(self, messages: List[Message], batch_size: int = 10):
+    async def save_episodes(self, messages: List[dict], batch_size: int = 10):
         for i in range(0, len(messages), batch_size):
             batch = messages[i:i + batch_size]
             
             bulk_episodes = [
                 RawEpisode(
                     name=f"telegram_message_{message.get('message_id', 'unknown')}",
-                    content=json.dumps(message, default=str),
+                    content=str(message),
                     source=EpisodeType.json,
                     source_description="TowerBot",
                     reference_time=message.date.astimezone(timezone.utc),
