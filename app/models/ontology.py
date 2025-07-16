@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Optional, List
 
 from pydantic import BaseModel, Field
@@ -22,9 +21,18 @@ class Event(BaseModel):
     """An event, meeting, or activity scheduled within the Frontier Tower."""
     title: str = Field(description="Title or name of the event.")
     description: Optional[str] = Field(None, description="Detailed description of the event.")
-    start_time: datetime = Field(description="Start time of the event.")
-    end_time: Optional[datetime] = Field(None, description="End time of the event.")
-    status: Optional[str] = Field("Scheduled", description="Current status, e.g., 'Scheduled', 'Completed', 'Cancelled'.")
+    start_time: Optional[str] = Field(
+        None,
+        description="Start time of the event as an ISO 8601 string, e.g., '2024-06-01T10:00:00Z'."
+    )
+    end_time: Optional[str] = Field(
+        None,
+        description="End time of the event as an ISO 8601 string, e.g., '2024-06-01T12:00:00Z'."
+    )
+    status: Optional[str] = Field(
+        "Scheduled",
+        description="Current status, e.g., 'Scheduled', 'Completed', 'Cancelled'."
+    )
 
 class Interest(BaseModel):
     """A topic, field, or area of interest relevant to users or events."""
@@ -37,19 +45,31 @@ class Project(BaseModel):
 # Edges
 class LocatedOn(BaseModel):
     """Indicates that an event, project, or user is located on a specific floor."""
-    since: Optional[datetime] = Field(None, description="Timestamp since the entity has been located here.")
+    since: Optional[str] = Field(
+        None,
+        description="Timestamp since the entity has been located here, as an ISO 8601 string."
+    )
     details: Optional[str] = Field(None, description="Additional location details, e.g., room number.")
 
 class WorksOn(BaseModel):
     """Represents a user's involvement in organizing or supporting a project or event."""
     role: Optional[str] = Field(None, description="Role of the user in the event, e.g., 'Speaker', 'Volunteer'.")
-    assigned_at: datetime = Field(default_factory=datetime.now, description="When the user was assigned to the event.")
+    assigned_at: Optional[str] = Field(
+        None,
+        description="When the user was assigned to the event, as an ISO 8601 string."
+    )
 
 class Attends(BaseModel):
     """Represents a user's attendance at an event."""
     rsvp_status: Optional[str] = Field(None, description="RSVP status, e.g., 'Attending', 'Interested', 'Declined'.")
-    checked_in_at: Optional[datetime] = Field(None, description="Timestamp when the user checked in.")
+    checked_in_at: Optional[str] = Field(
+        None,
+        description="Timestamp when the user checked in, as an ISO 8601 string."
+    )
 
 class InterestedIn(BaseModel):
     """Links a user or event to an area of interest."""
-    expressed_at: datetime = Field(default_factory=datetime.now, description="When the interest was expressed.")
+    expressed_at: Optional[str] = Field(
+        None,
+        description="When the interest was expressed, as an ISO 8601 string."
+    )

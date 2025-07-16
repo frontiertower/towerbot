@@ -1,13 +1,9 @@
-import json
-
-from typing import List
 from datetime import timezone
 
 from telegram import Message
 from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
 from graphiti_core.nodes import EpisodeType
-from graphiti_core.utils.bulk_utils import RawEpisode
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
 from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
@@ -26,7 +22,7 @@ def get_graphiti_client():
     neo4j_user = settings.NEO4J_USER
     neo4j_password = settings.NEO4J_PASSWORD
 
-    llm_small_model = settings.MODEL
+    llm_small_model = settings.RERANKER_MODEL
     llm_model = settings.MODEL
     embedding_model = settings.EMBEDDING_MODEL
 
@@ -63,7 +59,7 @@ def get_graphiti_client():
         ),
         cross_encoder=OpenAIRerankerClient(
             config=LLMConfig(
-                model=llm_small_model
+                model=azure_llm_config.small_model
             ),
             client=llm_client_azure
         )
@@ -92,9 +88,9 @@ class GraphService:
 
     async def connect(self):
         self.graphiti = get_graphiti_client()
-        if settings.APP_ENV == "dev":
-            await clear_data(self.graphiti.driver)
-            await self.graphiti.build_indices_and_constraints()
+        # if settings.APP_ENV == "dev":
+        #     await clear_data(self.graphiti.driver)
+        #     await self.graphiti.build_indices_and_constraints()
 
     async def close(self):
         await self.graphiti.close()
@@ -106,7 +102,7 @@ class GraphService:
     async def save_episode(self, message: Message):
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
-            episode_body=str(message),
+            episode_body=message.to_json(),
             source=EpisodeType.json,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
@@ -116,26 +112,3 @@ class GraphService:
             edge_type_map=self.edge_type_map,
             update_communities=True,
         )
-
-    async def save_episodes(self, messages: List[dict], batch_size: int = 10):
-        for i in range(0, len(messages), batch_size):
-            batch = messages[i:i + batch_size]
-            
-            bulk_episodes = [
-                RawEpisode(
-                    name=f"telegram_message_{message.get('message_id', 'unknown')}",
-                    content=str(message),
-                    source=EpisodeType.json,
-                    source_description="TowerBot",
-                    reference_time=message.date.astimezone(timezone.utc),
-                )
-                for message in batch
-            ]
-            
-            await self.graphiti.add_episode_bulk(
-                bulk_episodes, 
-                group_id=settings.GROUP_ID, 
-                entity_types=self.entity_types, 
-                edge_types=self.edge_types, 
-                edge_type_map=self.edge_type_map
-            )

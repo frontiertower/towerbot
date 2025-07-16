@@ -7,20 +7,7 @@ from langmem import create_manage_memory_tool, create_search_memory_tool
 from app.core.config import settings
 from app.core.constants import SYSTEM_PROMPT
 from app.models.responses import QuestionResponse
-from app.core.tools import get_qa_tools, get_connect_tools
-
-def get_model(model_type: str):
-    if model_type == "model":
-        deployment = settings.MODEL
-    elif model_type == "reasoning":
-        deployment = settings.REASONING_MODEL
-    else:
-        raise ValueError(f"Unknown model_type: {model_type}")
-    
-    return AzureChatOpenAI(
-        api_version="2024-12-01-preview",
-        azure_deployment=deployment,
-    )
+from app.core.tools import get_ask_tools, get_connect_tools
 
 class AiService:
     def __init__(self):
@@ -29,11 +16,11 @@ class AiService:
 
     def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
         self.qa_agent = create_react_agent(
-            name="QA",
+            name="Ask",
             model=llm,
             response_format=QuestionResponse,
             tools=[
-                *get_qa_tools(llm, embeddings),
+                *get_ask_tools(llm, embeddings),
                 create_manage_memory_tool(namespace=("memories", "{user_id}")),
                 create_search_memory_tool(namespace=("memories", "{user_id}")),
             ],
