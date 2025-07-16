@@ -9,19 +9,6 @@ from app.core.constants import SYSTEM_PROMPT
 from app.models.responses import QuestionResponse
 from app.core.tools import get_ask_tools, get_connect_tools
 
-def get_model(model_type: str):
-    if model_type == "model":
-        deployment = settings.MODEL
-    elif model_type == "reasoning":
-        deployment = settings.REASONING_MODEL
-    else:
-        raise ValueError(f"Unknown model_type: {model_type}")
-    
-    return AzureChatOpenAI(
-        api_version="2024-12-01-preview",
-        azure_deployment=deployment,
-    )
-
 class AiService:
     def __init__(self):
         self.qa_agent = None
