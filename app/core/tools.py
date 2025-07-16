@@ -165,7 +165,7 @@ def get_tower_info() -> dict[str, Any]:
     about the building's features, resources, or layout.
 
     Returns:
-        dict[str, Any]: A dictionary containing all available information about the Frontier Towner building.
+        dict[str, Any]: A dictionary containing all available information about the Frontier Towner.
     """
     project_root = Path(__file__).resolve().parent.parent.parent
     json_file_path = project_root / "static" / "json" / "tower.json"
