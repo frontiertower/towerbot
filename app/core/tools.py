@@ -4,7 +4,7 @@ import httpx
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import Any, Callable, List, Optional
+from typing import Any, List, Optional
 
 from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
@@ -50,7 +50,7 @@ SEARCH_RECIPE_MAP = {
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_MMR: COMMUNITY_HYBRID_SEARCH_MMR,
 }
 
-async def get_jwt_token() -> str:
+async def get_jwt_token():
     """
     Obtain a JWT access token from the BerlinHouse API using credentials from settings.
 
@@ -76,7 +76,7 @@ async def get_jwt_token() -> str:
     except httpx.RequestError as e:
         raise Exception(f"API Request Error: {e}") from e
 
-async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI) -> str:
+async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI):
     """
     Summarize a dictionary of events using an LLM, highlighting those relevant for today (US Pacific time).
 
@@ -112,7 +112,7 @@ async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI
 
 def get_calendar_events_tool(llm: AzureChatOpenAI):
     @tool
-    async def get_calendar_events() -> str:
+    async def get_calendar_events():
         """
         Retrieve all future events from the Luma calendar API and summarize them using an LLM.
 
@@ -137,7 +137,7 @@ def get_calendar_events_tool(llm: AzureChatOpenAI):
 
 def get_notion_database_tool(embeddings):
     @tool
-    async def get_notion_database(query: str) -> Optional[dict[str, Any]]:
+    async def get_notion_database(query: str):
         """
         Search the Notion database for information relevant to the provided query using vector search.
         Args:
@@ -162,7 +162,7 @@ def get_notion_database_tool(embeddings):
 
 
 @tool
-async def get_tower_communities() -> Optional[dict[str, Any]]:
+async def get_tower_communities():
     """
     Fetch and summarize all BerlinHouse communities using the BerlinHouse API and LLM summarization.
 
@@ -188,7 +188,7 @@ async def get_tower_communities() -> Optional[dict[str, Any]]:
         raise Exception(f"API Request Error: {e}") from e
 
 @tool
-def get_tower_info() -> dict[str, Any]:
+def get_tower_info():
     """
     Retrieve detailed information about the Frontier Towner building.
 
@@ -213,7 +213,7 @@ async def get_connections(
     recipe: Optional[SearchRecipeEnum] = None,
     edge_types: Optional[List[EdgeTypeEnum]] = None,
     node_labels: Optional[List[NodeTypeEnum]] = None,
-) -> Any:
+):
     """
     Dynamically searches the graph based on a query, optional filters, and a search recipe.
     This tool uses the low-level search method to allow for configurable strategies.
@@ -241,13 +241,13 @@ async def get_connections(
     )
 
 
-def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
+def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings):
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
     ]
 
-def get_connect_tools() -> List[Callable[..., Any]]:
+def get_connect_tools():
     return [
         get_connections,
     ]
