@@ -112,19 +112,23 @@ class GraphService:
         return "[Message with no text]"
 
     def _create_conversational_body(self, message: Message) -> str:
-        sender_name = message.from_user.first_name or "A user"
+        sender_name = message.from_user.first_name or message.from_user.username or "Unknown"
         message_text = self._get_message_description(message)
 
-        if message.reply_to_message:
-            original_msg = message.reply_to_message
-            original_sender = original_msg.from_user.first_name or "A user"
-            original_text = self._get_message_description(original_msg)
+        is_meaningful_reply = (
+            message.reply_to_message and
+            (message.reply_to_message.text or message.reply_to_message.photo)
+        )
 
+        if is_meaningful_reply:
+            original_msg = message.reply_to_message
+            original_sender = original_msg.from_user.first_name or original_msg.from_user.username or "Unknown"
+            original_text = self._get_message_description(original_msg)
             return (
                 f"{original_sender}: {original_text}\n"
                 f"{sender_name}: {message_text}"
             )
-        
+
         return f"{sender_name}: {message_text}"
 
     async def save_episode(self, message: Message):
