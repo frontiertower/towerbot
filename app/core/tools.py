@@ -194,7 +194,7 @@ async def get_connections(
     )
 
 
-def get_qa_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
+def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
