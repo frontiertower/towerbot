@@ -95,11 +95,30 @@ class GraphService:
         if settings.APP_ENV == "prod":
             await self.graphiti.build_communities()
 
+    def create_message_summary(self, message: Message) -> str:
+        sender_name = message.from_user.first_name or "A user"
+        message_text = message.text or ""
+
+        if message.reply_to_message:
+            original_msg = message.reply_to_message
+            original_sender = original_msg.from_user.first_name or "A user"
+            original_text = (original_msg.text or "...")[:150]
+
+            return (
+                f"{sender_name} replied to {original_sender}.\n\n"
+                f"Reply: \"{message_text}\"\n\n"
+                f"Original Post (from {original_sender}): \"{original_text}...\""
+            )
+        
+        return f"{sender_name} wrote: \"{message_text}\""
+
     async def save_episode(self, message: Message):
+        message_summary = self.create_message_summary(message)
+
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
-            episode_body=message.to_json(),
-            source=EpisodeType.json,
+            episode_body=message_summary,
+            source=EpisodeType.text,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
