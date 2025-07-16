@@ -29,7 +29,7 @@ class AiService:
 
     def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
         self.qa_agent = create_react_agent(
-            name="QA",
+            name="Ask",
             model=llm,
             response_format=QuestionResponse,
             tools=[
