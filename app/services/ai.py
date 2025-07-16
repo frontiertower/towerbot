@@ -33,7 +33,7 @@ class AiService:
             model=llm,
             response_format=QuestionResponse,
             tools=[
-                *get_qa_tools(llm, embeddings),
+                *get_ask_tools(llm, embeddings),
                 create_manage_memory_tool(namespace=("memories", "{user_id}")),
                 create_search_memory_tool(namespace=("memories", "{user_id}")),
             ],
