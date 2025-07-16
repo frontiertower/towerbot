@@ -99,14 +99,26 @@ class GraphService:
         if settings.APP_ENV == "prod":
             await self.graphiti.build_communities()
 
-    def create_conversational_body(self, message: Message) -> str:
-        sender_name = message.from_user.first_name or message.from_user.username or ""
-        message_text = message.text or ""
+    def _get_message_description(self, message: Message) -> str:
+        if message.text:
+            return message.text
+        if hasattr(message, 'forum_topic_created') and message.forum_topic_created:
+            return f"[Created Forum Topic: '{message.forum_topic_created.name}']"
+        if hasattr(message, 'photo') and message.photo:
+            return "[Shared a photo]"
+        if hasattr(message, 'sticker') and message.sticker:
+            return "[Sent a sticker]"
+        
+        return "[Message with no text]"
+
+    def _create_conversational_body(self, message: Message) -> str:
+        sender_name = message.from_user.first_name or "A user"
+        message_text = self._get_message_description(message)
 
         if message.reply_to_message:
             original_msg = message.reply_to_message
-            original_sender = original_msg.from_user.first_name or original_msg.from_user.username or ""
-            original_text = original_msg.text or "..."
+            original_sender = original_msg.from_user.first_name or "A user"
+            original_text = self._get_message_description(original_msg)
 
             return (
                 f"{original_sender}: {original_text}\n"
@@ -116,7 +128,7 @@ class GraphService:
         return f"{sender_name}: {message_text}"
 
     async def save_episode(self, message: Message):
-        conversational_body = self.create_conversational_body(message)
+        conversational_body = self._create_conversational_body(message)
 
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
