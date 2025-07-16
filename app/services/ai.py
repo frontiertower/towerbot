@@ -31,7 +31,6 @@ class AiService:
             model=llm,
             response_format=ConnectionResponse,
             tools=[get_connections],
-            store=store,
             checkpointer=checkpointer,
         )
 
