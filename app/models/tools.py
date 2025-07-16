@@ -20,11 +20,11 @@ class ConnectInputSchema(BaseModel):
     Schema for connecting two nodes in the graph.
 
     Attributes:
-        message (str): The full message to search the graph.
+        uery (str): The query to search the graph.
         edge_types (Optional[List[EdgeTypeEnum]]): Array of edge types, e.g. ['WorksOn', 'Attends'].
         node_labels (Optional[List[NodeTypeEnum]]): Array of node types, e.g. ['User', 'Floor'].
     """
-    message: str = Field(
+    query: str = Field(
         ...,
         description="The full message to search the graph"
     )

@@ -12,6 +12,7 @@ from langchain_openai import AzureOpenAIEmbeddings
 from langchain.tools.retriever import create_retriever_tool
 from graphiti_core.search.search_filters import SearchFilters
 from langchain_community.vectorstores import SupabaseVectorStore
+from graphiti_core.search.search_config_recipes import NODE_HYBRID_SEARCH_CROSS_ENCODER
 
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
@@ -177,11 +178,14 @@ def get_tower_info() -> dict[str, Any]:
 
 @tool("get_connections", args_schema=ConnectInputSchema)
 async def get_connections(
-    message: str,
+    query: str,
     edge_types: List[EdgeTypeEnum],
     node_labels: List[NodeTypeEnum],
 ) -> Any:
     graphiti = get_graphiti_client()
+    
+    node_search_config.limit = 5
+    node_search_config = NODE_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
 
     if edge_types and node_labels:
         search_filter = SearchFilters(
@@ -189,12 +193,15 @@ async def get_connections(
             edge_types=edge_types,
         )
         return await graphiti.search_(
-            query=message,
+            query=query,
+            config=node_search_config,
+            group_id=settings.GROUP_ID,
             search_filter=search_filter
         )
     else:
         return await graphiti.search_(
-            query=message
+            query=query,
+            group_id=settings.GROUP_ID
         )
 
 
