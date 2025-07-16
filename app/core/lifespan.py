@@ -18,9 +18,9 @@ from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from app.core.config import settings
 from app.services.ai import AiService
 from app.services.graph import GraphService
-from app.core.constants import COMMAND_EXAMPLES
 from app.services.database import DatabaseService
 from apscheduler.triggers.cron import CronTrigger
+from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 from apscheduler.schedulers.background import BackgroundScheduler
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 def is_valid_text_message(update: Update) -> bool:
     return bool(update.message and update.message.text and update.message.text.strip())
 
+async def handle_start(update: Update, _: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(INTRODUCTION)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db_service = context.application.bot_data["db_service"]
@@ -36,9 +38,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_valid_text_message(update):
         return
 
-    # If direct (private) message and not a command, reply with updated message
     if update.message.chat.type == "private":
-        await update.message.reply_text("Direct conversations coming soon. In the meantime, you can use commands (e.g. /ask, /help, /connect).")
+        await update.message.reply_text("Direct conversations are coming soon. In the meantime, you can use commands (e.g. /ask, /help, /connect).")
         return
 
     if update.message.reply_to_message:
@@ -140,6 +141,7 @@ async def lifespan(app: FastAPI):
     tg_app.add_handler(CommandHandler("ask", handle_command))
     tg_app.add_handler(CommandHandler("help", handle_command))
     tg_app.add_handler(CommandHandler("connect", handle_command))
+    tg_app.add_handler(CommandHandler("start", handle_start))
 
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
