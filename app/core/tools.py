@@ -175,8 +175,8 @@ def get_tower_info() -> dict[str, Any]:
     return tower_data
 
 
-@tool("get_connection", args_schema=ConnectInputSchema)
-async def get_connection(
+@tool("get_connections", args_schema=ConnectInputSchema)
+async def get_connections(
     query: str,
     edge_types: List[EdgeTypeEnum],
     node_labels: List[NodeTypeEnum],
@@ -198,10 +198,9 @@ def get_qa_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> Lis
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
-        get_notion_database_tool(embeddings),
     ]
 
 def get_connect_tools() -> List[Callable[..., Any]]:
     return [
-        get_connection,
+        get_connections,
     ]
