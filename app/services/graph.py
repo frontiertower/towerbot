@@ -121,14 +121,19 @@ class GraphService:
             raise ConnectionError("Graphiti client not connected. Call `connect()` first.")
 
         user_info = message.from_user
-        user_node = await self.graphiti.nodes.get(User, user_id=user_info.id)
+        user_node = None
+        try:
+            user_node = await User.get_by_uuid(self.graphiti.driver, uuid=str(user_info.id))
+        except Exception:
+            user_node = None
         if not user_node:
             user_node = User(
+                uuid=str(user_info.id),
                 user_id=user_info.id,
                 username=user_info.username,
                 first_name=user_info.first_name
             )
-            await self.graphiti.nodes.add(user_node)
+            await user_node.save(self.graphiti.driver)
 
         topic_id = message.message_thread_id
         topic_name = "General"
@@ -137,27 +142,50 @@ class GraphService:
         if not topic_id:
             topic_id = message.chat.id
 
-        topic_node = await self.graphiti.nodes.get(Topic, topic_id=topic_id)
+        topic_node = None
+        try:
+            topic_node = await Topic.get_by_uuid(self.graphiti.driver, uuid=str(topic_id))
+        except Exception:
+            topic_node = None
         if not topic_node:
-            topic_node = Topic(topic_id=topic_id, title=topic_name)
-            await self.graphiti.nodes.add(topic_node)
+            topic_node = Topic(uuid=str(topic_id), topic_id=topic_id, title=topic_name)
+            await topic_node.save(self.graphiti.driver)
 
         iso_timestamp = message.date.astimezone(timezone.utc).isoformat()
         message_node = Message(
+            uuid=str(message.message_id),
             message_id=message.message_id,
             text=message.text,
             timestamp=iso_timestamp
         )
-        await self.graphiti.nodes.add(message_node)
+        await message_node.save(self.graphiti.driver)
 
-        await self.graphiti.edges.add(user_node, Sent(), message_node)
-        await self.graphiti.edges.add(message_node, BelongsTo(), topic_node)
+        # Add edges using Cypher (MERGE pattern)
+        await self._add_edge("Sent", user_node.uuid, message_node.uuid)
+        await self._add_edge("BelongsTo", message_node.uuid, topic_node.uuid)
 
         if message.reply_to_message:
             parent_message_id = message.reply_to_message.message_id
-            parent_message_node = await self.graphiti.nodes.get(Message, message_id=parent_message_id)
+            parent_message_node = None
+            try:
+                parent_message_node = await Message.get_by_uuid(self.graphiti.driver, uuid=str(parent_message_id))
+            except Exception:
+                parent_message_node = None
             if parent_message_node:
-                await self.graphiti.edges.add(message_node, InReplyTo(), parent_message_node)
+                await self._add_edge("InReplyTo", message_node.uuid, parent_message_node.uuid)
+
+    async def _add_edge(self, edge_type: str, from_uuid: str, to_uuid: str):
+        # Generic Cypher for edge creation between nodes by uuid
+        cypher = f"""
+        MATCH (a {{uuid: $from_uuid}}), (b {{uuid: $to_uuid}})
+        MERGE (a)-[r:{edge_type}]->(b)
+        RETURN r
+        """
+        await self.graphiti.driver.execute_query(
+            cypher,
+            from_uuid=from_uuid,
+            to_uuid=to_uuid
+        )
 
     async def extract_entities_from_message(self, message: Message):
         if not self.graphiti:
