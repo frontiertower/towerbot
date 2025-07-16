@@ -237,7 +237,6 @@ async def get_connections(
     return await graphiti.search_(
         query=query,
         config=search_config,
-        group_id=settings.GROUP_ID,
         search_filter=search_filter
     )
 
