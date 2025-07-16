@@ -203,8 +203,3 @@ def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> Li
         get_tower_info,
         get_calendar_events_tool(llm),
     ]
-
-def get_connect_tools() -> List[Callable[..., Any]]:
-    return [
-        get_connections,
-    ]
