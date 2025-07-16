@@ -23,7 +23,6 @@ class Settings(BaseSettings):
     NEO4J_USER: str
     NOTION_API_KEY: str
     PORT: int = 3000
-    REASONING_MODEL: str
     RERANKER_MODEL: str
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_URL: str
