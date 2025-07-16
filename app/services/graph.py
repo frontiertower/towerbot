@@ -96,12 +96,12 @@ class GraphService:
             await self.graphiti.build_communities()
 
     def create_message_summary(self, message: Message) -> str:
-        sender_name = message.from_user.first_name or "A user"
+        sender_name = message.from_user.first_name or message.from_user.username or ""
         message_text = message.text or ""
 
         if message.reply_to_message:
             original_msg = message.reply_to_message
-            original_sender = original_msg.from_user.first_name or "A user"
+            original_sender = original_msg.from_user.first_name or original_msg.from_user.username or ""
             original_text = (original_msg.text or "...")[:150]
 
             return (
@@ -118,7 +118,7 @@ class GraphService:
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
             episode_body=message_summary,
-            source=EpisodeType.text,
+            source=EpisodeType.message,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
