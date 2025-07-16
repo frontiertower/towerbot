@@ -4,10 +4,9 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
-from app.core.config import settings
 from app.core.constants import SYSTEM_PROMPT
-from app.models.responses import QuestionResponse
-from app.core.tools import get_ask_tools, get_connect_tools
+from app.core.tools import get_ask_tools, get_connections
+from app.models.responses import QuestionResponse, ConnectionResponse
 
 class AiService:
     def __init__(self):
@@ -30,12 +29,8 @@ class AiService:
         self.connect_agent = create_react_agent(
             name="Connect",
             model=llm,
-            response_format=QuestionResponse,
-            tools=[
-                *get_connect_tools(),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
-            ],
+            response_format=ConnectionResponse,
+            tools=[get_connections],
             store=store,
             checkpointer=checkpointer,
         )
