@@ -177,7 +177,7 @@ def get_tower_info() -> dict[str, Any]:
 
 @tool("get_connections", args_schema=ConnectInputSchema)
 async def get_connections(
-    query: str,
+    message: str,
     edge_types: List[EdgeTypeEnum],
     node_labels: List[NodeTypeEnum],
 ) -> Any:
@@ -189,12 +189,12 @@ async def get_connections(
             edge_types=edge_types,
         )
         return await graphiti.search_(
-            query=query,
+            query=message,
             search_filter=search_filter
         )
     else:
         return await graphiti.search_(
-            query=query
+            query=message
         )
 
 
@@ -202,4 +202,9 @@ def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> Li
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
+    ]
+
+def get_connect_tools() -> List[Callable[..., Any]]:
+    return [
+        get_connections,
     ]
