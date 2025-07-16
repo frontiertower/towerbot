@@ -12,12 +12,43 @@ from langchain_openai import AzureOpenAIEmbeddings
 from langchain.tools.retriever import create_retriever_tool
 from graphiti_core.search.search_filters import SearchFilters
 from langchain_community.vectorstores import SupabaseVectorStore
-from graphiti_core.search.search_config_recipes import NODE_HYBRID_SEARCH_CROSS_ENCODER
-
+from graphiti_core.search.search_config_recipes import (
+    COMBINED_HYBRID_SEARCH_MMR,
+    COMBINED_HYBRID_SEARCH_CROSS_ENCODER,
+    EDGE_HYBRID_SEARCH_RRF,
+    EDGE_HYBRID_SEARCH_MMR,
+    EDGE_HYBRID_SEARCH_NODE_DISTANCE,
+    EDGE_HYBRID_SEARCH_EPISODE_MENTIONS,
+    EDGE_HYBRID_SEARCH_CROSS_ENCODER,
+    NODE_HYBRID_SEARCH_RRF,
+    NODE_HYBRID_SEARCH_MMR,
+    NODE_HYBRID_SEARCH_NODE_DISTANCE,
+    NODE_HYBRID_SEARCH_EPISODE_MENTIONS,
+    NODE_HYBRID_SEARCH_CROSS_ENCODER,
+    COMMUNITY_HYBRID_SEARCH_RRF,
+    COMMUNITY_HYBRID_SEARCH_MMR,
+)
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
 from app.services.database import get_supabase_client
-from app.models.tools import ConnectInputSchema, NodeTypeEnum, EdgeTypeEnum
+from app.models.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
+
+SEARCH_RECIPE_MAP = {
+    SearchRecipeEnum.COMBINED_HYBRID_SEARCH_MMR: COMBINED_HYBRID_SEARCH_MMR,
+    SearchRecipeEnum.COMBINED_HYBRID_SEARCH_CROSS_ENCODER: COMBINED_HYBRID_SEARCH_CROSS_ENCODER,
+    SearchRecipeEnum.EDGE_HYBRID_SEARCH_RRF: EDGE_HYBRID_SEARCH_RRF,
+    SearchRecipeEnum.EDGE_HYBRID_SEARCH_MMR: EDGE_HYBRID_SEARCH_MMR,
+    SearchRecipeEnum.EDGE_HYBRID_SEARCH_NODE_DISTANCE: EDGE_HYBRID_SEARCH_NODE_DISTANCE,
+    SearchRecipeEnum.EDGE_HYBRID_SEARCH_EPISODE_MENTIONS: EDGE_HYBRID_SEARCH_EPISODE_MENTIONS,
+    SearchRecipeEnum.EDGE_HYBRID_SEARCH_CROSS_ENCODER: EDGE_HYBRID_SEARCH_CROSS_ENCODER,
+    SearchRecipeEnum.NODE_HYBRID_SEARCH_RRF: NODE_HYBRID_SEARCH_RRF,
+    SearchRecipeEnum.NODE_HYBRID_SEARCH_MMR: NODE_HYBRID_SEARCH_MMR,
+    SearchRecipeEnum.NODE_HYBRID_SEARCH_NODE_DISTANCE: NODE_HYBRID_SEARCH_NODE_DISTANCE,
+    SearchRecipeEnum.NODE_HYBRID_SEARCH_EPISODE_MENTIONS: NODE_HYBRID_SEARCH_EPISODE_MENTIONS,
+    SearchRecipeEnum.NODE_HYBRID_SEARCH_CROSS_ENCODER: NODE_HYBRID_SEARCH_CROSS_ENCODER,
+    SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_RRF: COMMUNITY_HYBRID_SEARCH_RRF,
+    SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_MMR: COMMUNITY_HYBRID_SEARCH_MMR,
+}
 
 async def get_jwt_token() -> str:
     """
@@ -176,33 +207,39 @@ def get_tower_info() -> dict[str, Any]:
     return tower_data
 
 
-@tool("get_connections", args_schema=ConnectInputSchema)
+@tool("get_connections", args_schema=SearchInputSchema)
 async def get_connections(
     query: str,
-    edge_types: List[EdgeTypeEnum],
-    node_labels: List[NodeTypeEnum],
+    recipe: Optional[SearchRecipeEnum] = None,
+    edge_types: Optional[List[EdgeTypeEnum]] = None,
+    node_labels: Optional[List[NodeTypeEnum]] = None,
 ) -> Any:
+    """
+    Dynamically searches the graph based on a query, optional filters, and a search recipe.
+    This tool uses the low-level search method to allow for configurable strategies.
+    """
     graphiti = get_graphiti_client()
     
-    node_search_config.limit = 5
-    node_search_config = NODE_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
-
-    if edge_types and node_labels:
-        search_filter = SearchFilters(
-            node_labels=node_labels,
-            edge_types=edge_types,
-        )
-        return await graphiti.search_(
-            query=query,
-            config=node_search_config,
-            group_id=settings.GROUP_ID,
-            search_filter=search_filter
-        )
+    if recipe and recipe in SEARCH_RECIPE_MAP:
+        search_config = SEARCH_RECIPE_MAP[recipe].model_copy(deep=True)
     else:
-        return await graphiti.search_(
-            query=query,
-            group_id=settings.GROUP_ID
+        search_config = NODE_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
+
+    search_config.limit = 5
+
+    search_filter = None
+    if node_labels or edge_types:
+        search_filter = SearchFilters(
+            node_labels=node_labels or [],
+            edge_types=edge_types or [],
         )
+    
+    return await graphiti.search_(
+        query=query,
+        config=search_config,
+        group_id=settings.GROUP_ID,
+        search_filter=search_filter
+    )
 
 
 def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
