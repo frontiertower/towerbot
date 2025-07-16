@@ -183,15 +183,19 @@ async def get_connections(
 ) -> Any:
     graphiti = get_graphiti_client()
 
-    search_filter = SearchFilters(
-        node_labels=node_labels,
-        edge_types=edge_types,
-    )
-
-    return await graphiti.search_(
-        query=query,
-        search_filter=search_filter
-    )
+    if edge_types and node_labels:
+        search_filter = SearchFilters(
+            node_labels=node_labels,
+            edge_types=edge_types,
+        )
+        return await graphiti.search_(
+            query=query,
+            search_filter=search_filter
+        )
+    else:
+        return await graphiti.search_(
+            query=query
+        )
 
 
 def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings) -> List[Callable[..., Any]]:
