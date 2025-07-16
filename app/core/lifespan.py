@@ -36,6 +36,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_valid_text_message(update):
         return
 
+    # If direct (private) message and not a command, reply with updated message
+    if update.message.chat.type == "private":
+        await update.message.reply_text("Direct conversations coming soon. In the meantime, you can use commands (e.g. /ask, /help, /connect).")
+        return
+
     if update.message.reply_to_message:
         pending_commands = context.application.bot_data.get("pending_commands", {})
         replied_id = update.message.reply_to_message.message_id
