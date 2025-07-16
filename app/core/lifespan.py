@@ -138,10 +138,10 @@ async def lifespan(app: FastAPI):
     tg_app.bot_data["db_service"] = db_service
     tg_app.bot_data["graph_service"] = graph_service
 
+    tg_app.add_handler(CommandHandler("start", handle_start))
     tg_app.add_handler(CommandHandler("ask", handle_command))
     tg_app.add_handler(CommandHandler("help", handle_command))
     tg_app.add_handler(CommandHandler("connect", handle_command))
-    tg_app.add_handler(CommandHandler("start", handle_start))
 
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
