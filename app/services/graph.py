@@ -1,7 +1,7 @@
 import json
 
 from typing import List
-from datetime import timezone
+from datetime import timezone, datetime
 
 from telegram import Message
 from openai import AsyncAzureOpenAI
@@ -117,25 +117,16 @@ class GraphService:
             update_communities=True,
         )
 
-    async def save_episodes(self, messages: List[dict], batch_size: int = 10):
-        for i in range(0, len(messages), batch_size):
-            batch = messages[i:i + batch_size]
-            
-            bulk_episodes = [
-                RawEpisode(
-                    name=f"telegram_message_{message.get('message_id', 'unknown')}",
-                    content=str(message),
-                    source=EpisodeType.json,
-                    source_description="TowerBot",
-                    reference_time=message.date.astimezone(timezone.utc),
-                )
-                for message in batch
-            ]
-            
-            await self.graphiti.add_episode_bulk(
-                bulk_episodes, 
-                group_id=settings.GROUP_ID, 
-                entity_types=self.entity_types, 
-                edge_types=self.edge_types, 
-                edge_type_map=self.edge_type_map
+    async def save_episodes(self, messages: List[dict]):
+        bulk_episodes = [
+            RawEpisode(
+                name=f"telegram_message_{msg.get('message_id', 'unknown')}",
+                content=json.dumps(msg),
+                source=EpisodeType.json,
+                source_description="TowerBot",
+                reference_time=msg.get("date", datetime.now(timezone.utc)),
             )
+            for msg in enumerate(messages)
+        ]
+
+        await self.graphiti.add_episode_bulk(bulk_episodes)
