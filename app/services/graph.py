@@ -117,16 +117,16 @@ class GraphService:
             update_communities=True,
         )
 
-    async def save_episodes(self, messages: List[dict]):
-        bulk_episodes = [
-            RawEpisode(
-                name=f"telegram_message_{msg.get('message_id', 'unknown')}",
-                content=json.dumps(msg),
-                source=EpisodeType.json,
-                source_description="TowerBot",
-                reference_time=msg.get("date", datetime.now(timezone.utc)),
-            )
-            for msg in enumerate(messages)
-        ]
-
-        await self.graphiti.add_episode_bulk(bulk_episodes)
+    async def save_old_episode(self, message: dict):
+        await self.graphiti.add_episode(
+            name=f"telegram_message_{message.get('message_id', 'unknown')}",
+            episode_body=str(message),
+            source=EpisodeType.json,
+            source_description="TowerBot",
+            reference_time=message.get("date", datetime.now(timezone.utc)),
+            group_id=settings.GROUP_ID,
+            entity_types=self.entity_types,
+            edge_types=self.edge_types,
+            edge_type_map=self.edge_type_map,
+            update_communities=True,
+        )
