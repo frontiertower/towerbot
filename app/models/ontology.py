@@ -1,7 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
-# Entities
 class User(BaseModel):
     """A registered individual in the Frontier Tower ecosystem."""
     first_name: str = Field(description="Full name of the user.")
@@ -41,7 +40,6 @@ class Project(BaseModel):
     """A specific project being worked on by users or communities."""
     status: Optional[str] = Field("Active", description="The current status, e.g., 'Active', 'Archived'.")
 
-# Edges
 class LocatedOn(BaseModel):
     """Indicates that an event, project, or user is located on a specific floor."""
     since: Optional[str] = Field(

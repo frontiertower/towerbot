@@ -5,6 +5,7 @@ from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
 from graphiti_core.nodes import EpisodeType
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
+# from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
 
@@ -87,6 +88,9 @@ class GraphService:
 
     async def connect(self):
         self.graphiti = get_graphiti_client()
+        # if settings.APP_ENV == "dev":
+        #     await clear_data(self.graphiti.driver)
+        #     await self.graphiti.build_indices_and_constraints()
 
     async def close(self):
         await self.graphiti.close()
