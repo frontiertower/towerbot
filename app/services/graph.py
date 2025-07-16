@@ -4,7 +4,7 @@ from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
 from graphiti_core.nodes import EpisodeType
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
-from graphiti_core.utils.maintenance.graph_data_operations import clear_data
+# from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
 
