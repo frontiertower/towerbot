@@ -106,24 +106,10 @@ class GraphService:
     async def save_episode(self, message: Message):
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
-            episode_body=str(message),
+            episode_body=message.to_json(),
             source=EpisodeType.json,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
-            group_id=settings.GROUP_ID,
-            entity_types=self.entity_types,
-            edge_types=self.edge_types,
-            edge_type_map=self.edge_type_map,
-            update_communities=True,
-        )
-
-    async def save_old_episode(self, message: dict):
-        await self.graphiti.add_episode(
-            name=f"telegram_message_{message.get('message_id', 'unknown')}",
-            episode_body=str(message),
-            source=EpisodeType.json,
-            source_description="TowerBot",
-            reference_time=message.get("date", datetime.now(timezone.utc)),
             group_id=settings.GROUP_ID,
             entity_types=self.entity_types,
             edge_types=self.edge_types,
