@@ -113,13 +113,27 @@ class GraphService:
             await self.graphiti.build_communities()
 
     async def process_telegram_message(self, message: TelegramMessage):
-        await self.add_structured_message(message)
-        await self.extract_entities_from_message(message)
+        await self._add_structured_message(message)
+        await self._extract_entities_from_message(message)
 
-    async def add_structured_message(self, message: TelegramMessage):
-        if not self.graphiti:
-            raise ConnectionError("Graphiti client not connected. Call `connect()` first.")
+    async def check_user_exists(self, message: TelegramMessage):
+        user_id = message.from_user.id
+        cypher = """
+        MATCH (n:User {user_id: $user_id})
+        RETURN n.user_id
+        LIMIT 1
+        """
+        result = await self.graphiti.driver.execute_query(
+            cypher,
+            user_id=user_id
+        )
 
+        records = getattr(result, "records", None)
+        if records is not None:
+            return len(records) > 0
+        return bool(result)
+
+    async def _add_structured_message(self, message: TelegramMessage):
         user_info = message.from_user
         user_id = user_info.id
         user_node = None
@@ -217,10 +231,7 @@ class GraphService:
             to_id=to_id
         )
 
-    async def extract_entities_from_message(self, message: TelegramMessage):
-        if not self.graphiti:
-            raise ConnectionError("Graphiti client not connected. Call `connect()` first.")
-
+    async def _extract_entities_from_message(self, message: TelegramMessage):
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
             episode_body=message.to_json(),

@@ -5,8 +5,8 @@ from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
 from app.core.constants import SYSTEM_PROMPT
-from app.core.tools import get_ask_tools, get_connect_tools
 from app.models.responses import QuestionResponse, ConnectionResponse
+from app.core.tools import get_qa_agent_tools, get_connect_agent_tools
 
 class AiService:
     def __init__(self):
@@ -19,7 +19,7 @@ class AiService:
             model=llm,
             response_format=QuestionResponse,
             tools=[
-                *get_ask_tools(llm, embeddings),
+                *get_qa_agent_tools(llm, embeddings),
                 create_manage_memory_tool(namespace=("memories", "{user_id}")),
                 create_search_memory_tool(namespace=("memories", "{user_id}")),
             ],
@@ -31,7 +31,7 @@ class AiService:
             model=llm,
             response_format=ConnectionResponse,
             tools=[
-                *get_connect_tools(),
+                *get_connect_agent_tools(),
                 create_manage_memory_tool(namespace=("memories", "{user_id}")),
                 create_search_memory_tool(namespace=("memories", "{user_id}")),
             ],
