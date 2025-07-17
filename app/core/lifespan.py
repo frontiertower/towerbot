@@ -232,9 +232,10 @@ async def lifespan(app: FastAPI):
             azure_deployment=settings.MODEL
         )
 
-        # Create connection pool with autocommit mode to avoid transaction issues
+        # Create connection pool with proper configuration
         pool = AsyncConnectionPool(
             conninfo=settings.SUPABASE_CONN_STRING,
+            configure=lambda conn: conn.set_autocommit(True)
         )
         
         # Open the pool explicitly as recommended
