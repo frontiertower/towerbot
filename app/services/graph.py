@@ -314,29 +314,43 @@ class GraphService:
         await self._add_edge("SENT", user_node.user_id, message_node.message_id, "User", "Message")
         await self._add_edge("SENT_IN", message_node.message_id, topic_node.topic_id, "Message", "Topic")
 
-        if message.reply_to_message:
+        if message.reply_to_message and not message.reply_to_message.forum_topic_created:
             parent_message_id = message.reply_to_message.message_id
-            cypher = "MATCH (n:Message {message_id: $message_id}) RETURN n"
-            result = await self.graphiti.driver.execute_query(cypher, message_id=parent_message_id)
+            await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
 
-            if result and isinstance(result[0], dict) and 'n' in result[0]:
-                await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
-
-    async def _add_edge(self, edge_type: str, from_id: int, to_id: int, from_label: str, to_label: str):
+    async def _add_edge(
+        self,
+        edge_type: str,
+        from_id: int,
+        to_id: int,
+        from_label: str,
+        to_label: str
+    ):
         """Add an edge relationship between two nodes in the graph.
-        
+
+        This method uses MERGE to idempotently create the nodes and the relationship,
+        preventing errors if a node does not yet exist.
+
         Args:
-            edge_type: Type of edge to create (e.g., 'SENT', 'SENT_IN')
+            edge_type: Type of edge to create (e.g., 'SENT', 'IN_REPLY_TO')
             from_id: ID of the source node
             to_id: ID of the target node
             from_label: Label of the source node type
             to_label: Label of the target node type
         """
-        from_id_field = "user_id" if from_label == "User" else "message_id" if from_label == "Message" else "topic_id"
-        to_id_field = "user_id" if to_label == "User" else "message_id" if to_label == "Message" else "topic_id"
-        
+        # Map node labels to their unique identifier fields
+        id_fields = {
+            "User": "user_id",
+            "Message": "message_id",
+            "Topic": "topic_id"
+        }
+        from_id_field = id_fields.get(from_label, "id")
+        to_id_field = id_fields.get(to_label, "id")
+
+        # Use MERGE to find or create nodes, then MERGE the relationship
         cypher = f"""
-        MATCH (a:{from_label} {{{from_id_field}: $from_id}}), (b:{to_label} {{{to_id_field}: $to_id}})
+        MERGE (a:{from_label} {{{from_id_field}: $from_id}})
+        MERGE (b:{to_label} {{{to_id_field}: $to_id}})
         MERGE (a)-[r:{edge_type}]->(b)
         RETURN r
         """
