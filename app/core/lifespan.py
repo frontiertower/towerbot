@@ -169,7 +169,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.message.chat.type == "supergroup":
         await graph_service.process_telegram_message(update.message)
-        await db_service.save_message(update.message)
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -242,7 +241,7 @@ async def lifespan(app: FastAPI):
 
         # Create connection pool with proper configuration
         pool = AsyncConnectionPool(
-            conninfo=settings.SUPABASE_CONN_STRING,
+            conninfo=settings.POSTGRES_CONN_STRING,
             max_size=20,
             kwargs=connection_kwargs,
         )

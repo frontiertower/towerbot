@@ -36,11 +36,8 @@ class Settings(BaseSettings):
         NEO4J_USER: Neo4j database username
         NOTION_API_KEY: Notion API key
         PORT: Server port number
+        POSTGRES_CONN_STRING: Postgres connection string
         RERANKER_MODEL: Name of the reranker model to use
-        SUPABASE_ANON_KEY: Supabase anonymous key
-        SUPABASE_CONN_STRING: Supabase database connection string
-        SUPABASE_SERVICE_ROLE_KEY: Supabase service role key
-        SUPABASE_URL: Supabase project URL
         WEBHOOK_URL: Webhook URL for external integrations
     """
     APP_ENV: str = "dev"
@@ -61,11 +58,8 @@ class Settings(BaseSettings):
     NEO4J_USER: str
     NOTION_API_KEY: str
     PORT: int = 3000
+    POSTGRES_CONN_STRING: str
     RERANKER_MODEL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_CONN_STRING: str
-    SUPABASE_SERVICE_ROLE_KEY: str
-    SUPABASE_URL: str
     WEBHOOK_URL: str
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
