@@ -241,13 +241,13 @@ async def get_connections(
     )
 
 
-def get_ask_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings):
+def get_qa_agent_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings):
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
     ]
 
-def get_connect_tools():
+def get_connect_agent_tools():
     return [
         get_connections,
     ]

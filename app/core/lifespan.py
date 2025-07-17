@@ -72,6 +72,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ai_service: AiService = context.application.bot_data["ai_service"]
 
     if update.message.chat.type == "private":
+        # TODO: Confirm via BerlinHouse API if user is a citizen
+        user_exists = await graph_service.check_user_exists(update.message)
+        if not user_exists:
+            await update.message.reply_text(
+                "Sorry, you're not a member of the Frontier Tower. Please <a href='https://frontiertower.io'>join the community</a> to get access.",
+                parse_mode="HTML"
+            )
+            return
+
         await update.message.reply_text("Direct conversations are coming soon. In the meantime, you can use commands (e.g. /ask, /help, /connect).")
         return
 
