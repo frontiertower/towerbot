@@ -258,7 +258,7 @@ async def lifespan(app: FastAPI):
             },
         )
 
-        checkpointer = AsyncPostgresSaver(pool)
+        checkpointer = AsyncPostgresSaver(conn=pool)
 
         await store.setup()
         await checkpointer.setup()
