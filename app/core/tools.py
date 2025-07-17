@@ -8,10 +8,7 @@ from typing import Any, List, Optional
 
 from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
-from langchain_openai import AzureOpenAIEmbeddings
-from langchain.tools.retriever import create_retriever_tool
 from graphiti_core.search.search_filters import SearchFilters
-from langchain_community.vectorstores import SupabaseVectorStore
 from graphiti_core.search.search_config_recipes import (
     COMBINED_HYBRID_SEARCH_MMR,
     COMBINED_HYBRID_SEARCH_CROSS_ENCODER,
@@ -30,7 +27,6 @@ from graphiti_core.search.search_config_recipes import (
 )
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
-from app.services.database import get_supabase_client
 from app.models.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
 
 SEARCH_RECIPE_MAP = {
@@ -135,32 +131,6 @@ def get_calendar_events_tool(llm: AzureChatOpenAI):
             raise Exception(f"API Request Error: {e}") from e
     return get_calendar_events
 
-def get_notion_database_tool(embeddings):
-    @tool
-    async def get_notion_database(query: str):
-        """
-        Search the Notion database for information relevant to the provided query using vector search.
-        Args:
-            query (str): The search query string.
-        Returns:
-            Optional[dict[str, Any]]: The most relevant information as a JSON object, or None if nothing is found.
-        """
-        vectorstore = SupabaseVectorStore(
-            embedding=embeddings,
-            client=get_supabase_client(),
-            table_name="documents",
-            query_name="match_documents",
-        )
-        retriever = vectorstore.as_retriever()
-        retriever_tool = create_retriever_tool(
-            retriever,
-            "retrieve_notion_database",
-            "Search and return information about Frontier Towner's Notion database.",
-        )
-        return retriever_tool.invoke({"query": query})
-    return get_notion_database
-
-
 @tool
 async def get_tower_communities():
     """
@@ -241,7 +211,7 @@ async def get_connections(
     )
 
 
-def get_qa_agent_tools(llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings):
+def get_qa_agent_tools(llm: AzureChatOpenAI):
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
