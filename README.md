@@ -279,7 +279,7 @@ towerbot/
 │   │   ├── constants.py       # System prompts and command examples
 │   │   ├── lifespan.py        # Application startup/shutdown lifecycle
 │   │   └── tools.py           # AI agent tools and external API integrations
-│   ├── models/
+│   ├── schemas/
 │   │   ├── ontology.py        # Graph database schema and entity definitions
 │   │   ├── responses.py       # Pydantic models for AI responses
 │   │   └── tools.py           # Tool parameter schemas and enums
@@ -303,7 +303,7 @@ towerbot/
 **Key Components:**
 
 - **Core Services:** AI agents, database operations, graph processing
-- **Data Models:** Structured schemas for entities, responses, and tools
+- **Data Schemas:** Structured schemas for entities, responses, and tools
 - **API Layer:** FastAPI endpoints for health checks and webhook handling
 - **Configuration:** Environment-based settings with Pydantic validation
 - **Logging:** Comprehensive structured logging across all modules

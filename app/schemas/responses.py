@@ -1,6 +1,6 @@
-"""Response models for TowerBot AI agents.
+"""Response schemas for TowerBot AI agents.
 
-This module defines Pydantic models for structuring AI agent responses,
+This module defines Pydantic schemas for structuring AI agent responses,
 including question-answering and connection-finding capabilities.
 """
 
@@ -8,7 +8,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 
-from app.models.tools import NodeTypeEnum
+from app.schemas.tools import NodeTypeEnum
 
 class SourceType(str, Enum):
     """Enumeration of data source types for question responses."""
@@ -21,7 +21,7 @@ class ToolUsed(str, Enum):
     VECTOR_SEARCH = "Vector Search"
 
 class ConnectionCandidate(BaseModel):
-    """Model representing a potential connection match.
+    """Schema representing a potential connection match.
     
     Represents a single candidate for user connection based on
     graph search results, including match confidence and metadata.
@@ -46,7 +46,7 @@ class ConnectionCandidate(BaseModel):
     )
 
 class QuestionResponse(BaseModel):
-    """Model for structured question-answering responses.
+    """Schema for structured question-answering responses.
     
     Provides comprehensive information about how a question was answered,
     including source attribution, confidence scores, and retrieval metadata.
@@ -92,7 +92,7 @@ class QuestionResponse(BaseModel):
     }
 
 class ConnectionResponse(BaseModel):
-    """Model for structured connection-finding responses.
+    """Schema for structured connection-finding responses.
     
     Provides ranked candidates for user connections along with
     confidence metrics and search metadata.

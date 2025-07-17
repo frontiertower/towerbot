@@ -17,7 +17,7 @@ from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
 
 from app.core.config import settings
-from app.models.ontology import (
+from app.schemas.ontology import (
     User, Topic, Message, Sent, InReplyTo, SentIn, 
     Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, AssignedTo, Task, Floor, RelatedTo
 )

@@ -1,4 +1,4 @@
-"""Tool models and schemas for TowerBot graph search operations.
+"""Tool schemas for TowerBot graph search operations.
 
 This module defines enumerations and schemas for graph search functionality,
 including node types, edge types, and search configuration options.

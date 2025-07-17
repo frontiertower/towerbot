@@ -13,7 +13,7 @@ from langgraph.checkpoint.postgres.base import BasePostgresSaver
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
 from app.core.constants import SYSTEM_PROMPT
-from app.models.responses import QuestionResponse, ConnectionResponse
+from app.schemas.responses import QuestionResponse, ConnectionResponse
 from app.core.tools import get_qa_agent_tools, get_connect_agent_tools
 
 logger = logging.getLogger(__name__)
