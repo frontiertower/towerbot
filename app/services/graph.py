@@ -18,8 +18,8 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 
 from app.core.config import settings
 from app.models.ontology import (
-    User, Topic, Message, Sent, InReplyTo, BelongsTo, 
-    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn
+    User, Topic, Message, Sent, InReplyTo, SentIn, 
+    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, AssignedTo, Task, Floor, RelatedTo
 )
 
 logger = logging.getLogger(__name__)
@@ -109,26 +109,44 @@ class GraphService:
             "Message": Message,
             "Event": Event, 
             "Interest": Interest, 
-            "Project": Project
+            "Project": Project,
+            "Task": Task,
+            "Floor": Floor
         }
         self.edge_types = {
             "SENT": Sent,
-            "BELONGS_TO": BelongsTo,
+            "SENT_IN": SentIn,
             "IN_REPLY_TO": InReplyTo,
             "LOCATED_ON": LocatedOn,
             "WORKS_ON": WorksOn,
             "ATTENDS": Attends,
             "INTERESTED_IN": InterestedIn,
+            "ASSIGNED_TO": AssignedTo,
+            "RELATED_TO": RelatedTo,
         }
         self.edge_type_map = {
+            # User relationships
             ("User", "Event"): ["ATTENDS"],
             ("User", "Floor"): ["LOCATED_ON"],
-            ("Event", "Floor"): ["LOCATED_ON"],
-            ("Project", "Floor"): ["LOCATED_ON"],
             ("User", "Interest"): ["INTERESTED_IN"],
             ("User", "Project"): ["WORKS_ON"],
-            ("Event", "Interest"): ["INTERESTED_IN"],
-            ("Entity", "Entity"): ["RELATES_TO"],
+            ("User", "Task"): ["ASSIGNED_TO"],
+            
+            # Message relationships
+            ("User", "Message"): ["SENT"],
+            ("Message", "Topic"): ["SENT_IN"],
+            ("Message", "Message"): ["IN_REPLY_TO"],
+            
+            # Location relationships
+            ("Event", "Floor"): ["LOCATED_ON"],
+            ("Project", "Floor"): ["LOCATED_ON"],
+            
+            # Project relationships
+            ("Task", "Project"): ["RELATED_TO"],
+            ("Project", "Interest"): ["RELATED_TO"],
+            
+            # Event relationships
+            ("Event", "Interest"): ["RELATED_TO"],
         }
 
     async def connect(self):
@@ -181,7 +199,7 @@ class GraphService:
         """
         try:
             logger.debug(f"Processing message {message.message_id} for graph integration")
-            await self._add_structured_message(message)
+            await self._store_message_context(message)
             await self._add_episode(message)
             logger.debug(f"Successfully processed message {message.message_id}")
         except Exception as e:
@@ -213,7 +231,7 @@ class GraphService:
             return len(records) > 0
         return bool(result)
 
-    async def _add_structured_message(self, message: TelegramMessage):
+    async def _store_message_context(self, message: TelegramMessage):
         """Add structured message data to the knowledge graph.
         
         Creates or updates User, Topic, and Message nodes and establishes
@@ -294,7 +312,7 @@ class GraphService:
         )
 
         await self._add_edge("SENT", user_node.user_id, message_node.message_id, "User", "Message")
-        await self._add_edge("BELONGS_TO", message_node.message_id, topic_node.topic_id, "Message", "Topic")
+        await self._add_edge("SENT_IN", message_node.message_id, topic_node.topic_id, "Message", "Topic")
 
         if message.reply_to_message:
             parent_message_id = message.reply_to_message.message_id
@@ -308,7 +326,7 @@ class GraphService:
         """Add an edge relationship between two nodes in the graph.
         
         Args:
-            edge_type: Type of edge to create (e.g., 'SENT', 'BELONGS_TO')
+            edge_type: Type of edge to create (e.g., 'SENT', 'SENT_IN')
             from_id: ID of the source node
             to_id: ID of the target node
             from_label: Label of the source node type
@@ -346,7 +364,7 @@ class GraphService:
             reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
             entity_types=self.entity_types,
-            excluded_entity_types=["User", "Topic", "Message"],
+            excluded_entity_types=["User", "Topic", "Message", "Floor"],
             edge_types=self.edge_types,
             edge_type_map=self.edge_type_map,
             update_communities=True,

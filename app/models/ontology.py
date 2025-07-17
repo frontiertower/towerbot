@@ -8,6 +8,7 @@ class User(BaseModel):
     username: Optional[str] = Field(None, description="The user's username, if available.")
     first_name: str = Field(..., description="The user's first name, if available.")
     last_name: Optional[str] = Field(None, description="The user's last name, if available.")
+    floor: Optional[int] = Field(None, description="The level of the floor this user is a member of, if any.")
     bio: Optional[str] = Field(None, description="A short biography or summary of the user's interests and background.")
     skills: Optional[List[str]] = Field(default_factory=list, description="A list of the user's skills or areas of expertise.")
 
@@ -31,12 +32,20 @@ class Message(BaseModel):
     class Config:
         label = "Message"
 
+class Task(BaseModel):
+    """A specific action or bounty that needs to be completed."""
+    title: str = Field(..., description="A short description of the task.")
+    status: str = Field("Open", description="The current status, e.g., 'Open', 'In-Progress', 'Completed'.")
+    reward: Optional[str] = Field(None, description="Any reward or points associated with the task.")
+
+    class Config:
+        label = "Task"
+
 class Floor(BaseModel):
     """A physical or logical floor within the Frontier Tower."""
-    level: int = Field(..., description="Numeric floor level, e.g., 1 for first floor.")
-    description: Optional[str] = Field(None, description="Description of the floor, e.g., 'Innovation Lab'.")
+    level: int = Field(..., description="Numeric floor level, e.g., 9 for ninth floor.")
+    description: Optional[str] = Field(None, description="Description of the floor, e.g., 'Artificial Intelligence'.")
     facilities: Optional[List[str]] = Field(None, description="List of facilities available on this floor.")
-    capacity: Optional[int] = Field(None, description="Maximum occupancy of the floor.")
 
     class Config:
         label = "Floor"
@@ -83,10 +92,10 @@ class Sent(BaseModel):
     class Config:
         label = "SENT"
 
-class BelongsTo(BaseModel):
+class SentIn(BaseModel):
     """Membership relationship between a message and a topic."""
     class Config:
-        label = "BELONGS_TO"
+        label = "SENT_IN"
 
 class InReplyTo(BaseModel):
     """Reply relationship between a message and another message."""
@@ -115,6 +124,16 @@ class WorksOn(BaseModel):
     class Config:
         label = "WORKS_ON"
 
+class AssignedTo(BaseModel):
+    """Relationship linking a task to a user."""
+    assigned_at: Optional[str] = Field(
+        None,
+        description="ISO 8601 timestamp when the user was assigned to the task."
+    )
+
+    class Config:
+        label = "ASSIGNED_TO"
+
 class Attends(BaseModel):
     """Attendance relationship between a user and an event."""
     rsvp_status: Optional[str] = Field(None, description="RSVP status, e.g., 'Attending', 'Interested', 'Declined'.")
@@ -135,3 +154,13 @@ class InterestedIn(BaseModel):
 
     class Config:
         label = "INTERESTED_IN"
+
+class RelatedTo(BaseModel):
+    """General relationship between entities that are related."""
+    relationship_type: Optional[str] = Field(
+        None, 
+        description="Type of relationship, e.g., 'technology', 'domain', 'topic'"
+    )
+    
+    class Config:
+        label = "RELATED_TO"
