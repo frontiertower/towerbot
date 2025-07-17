@@ -3,7 +3,7 @@
 [![Project Status](https://img.shields.io/badge/status-active-brightgreen)](https://github.com/frontiertower/towerbot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-TowerBot is an open source, AI-powered Telegram assistant designed for Frontier Tower citizen developers. It answers questions, provides insights, and leverages persistent memory and external knowledge sources to empower your Telegram community.
+TowerBot is an open source, AI-powered Telegram assistant for Frontier Tower citizen developers. It answers questions, provides insights, and leverages persistent memory, semantic search, and a temporal knowledge graph to empower your Telegram community.
 
 **This project is licensed under the [MIT License](LICENSE) and is free for both commercial and non-commercial use.**
 
@@ -11,7 +11,7 @@ TowerBot is an open source, AI-powered Telegram assistant designed for Frontier 
 
 ## ✨ What is TowerBot?
 
-TowerBot connects your Telegram group to powerful AI and community data. It can answer questions, summarize information, and provide analytics—all with persistent memory and semantic search.
+TowerBot connects your Telegram group to powerful AI and community data. It can answer questions, summarize information, and provide analytics—all with persistent memory and semantic/graph search. It also provides detailed information about the building, events, and community using structured data.
 
 ---
 
@@ -33,7 +33,10 @@ TowerBot connects your Telegram group to powerful AI and community data. It can 
 - **Azure OpenAI** (LLM via LangChain)
 - **Supabase** (vector search)
 - **Neo4j** (graph database)
+- **Graphiti** (temporal knowledge graph)
 - **Docker** (optional, for deployment)
+
+Dependencies are managed in `pyproject.toml`.
 
 ---
 
@@ -43,7 +46,7 @@ TowerBot uses [**Graphiti**](https://github.com/getzep/graphiti) — a Python li
 
 **What is Graphiti?**
 
-Graphiti is designed to manage evolving relationships and context over time by capturing and recording changes in facts and relationships. It enables TowerBot to construct a dynamic knowledge graph of your community, where facts (nodes and edges) can change as new data arrives. This allows TowerBot to:
+Graphiti manages evolving relationships and context over time by capturing and recording changes in facts and relationships. It enables TowerBot to construct a dynamic knowledge graph of your community, where facts (nodes and edges) can change as new data arrives. This allows TowerBot to:
 
 - Track how relationships and facts change over time (temporal awareness)
 - Maintain historical context for more accurate, context-aware answers
@@ -62,11 +65,29 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 
 ## 🚀 Features
 
-- **AI Q&A:** `/ask <question>` in Telegram, get instant answers
+- **AI Q&A:** `/ask <question>` in Telegram, get instant, context-aware answers
+- **Help Requests:** `/help <request>` to submit issues or requests (e.g., facilities, supplies)
+- **Community Connections:** `/connect <interest>` to find people, projects, or resources
 - **Persistent Memory:** Stores all questions/messages for analytics and context
-- **Vector Search:** Semantic search over documents using Supabase
-- **Graph Analytics:** Community graph features via Neo4j
+- **Vector & Graph Search:** Semantic and graph search over documents and community data
+- **Building & Community Info:** Answers questions about the building, amenities, events, and more using structured data
 - **Health Check:** `/health` endpoint for monitoring
+- **Webhook Endpoint:** `/telegram` endpoint for Telegram updates
+
+---
+
+## 🗨️ Command Usage
+
+TowerBot responds to the following commands in your Telegram group:
+
+- `/ask <question>` — Get answers to questions about the building, community, or general topics.  
+  _Example:_ `/ask what's the wifi password?`
+- `/help <request>` — Submit a help or maintenance request.  
+  _Example:_ `/help we need more toilet paper on the 9th floor`
+- `/connect <interest>` — Find people, projects, or resources related to a topic.  
+  _Example:_ `/connect who can help me learn more about biotech?`
+
+If you use a command without context, TowerBot will prompt you for more information with an example.
 
 ---
 
@@ -74,12 +95,13 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 
 ```mermaid
 graph TD;
-  TG["Telegram Group"] -->|/ask command| BOT["TowerBot (python-telegram-bot)"]
+  TG["Telegram Group"] -->|/ask, /help, /connect| BOT["TowerBot (python-telegram-bot)"]
   BOT --> API["FastAPI Backend"]
   API --> AI["Azure OpenAI (LangChain)"]
   API --> DB["Supabase (Vectors)"]
-  API --> GRAPH["Neo4j (Graph DB)"]
+  API --> GRAPH["Neo4j (Graph DB) + Graphiti"]
   API --> Health["/health Endpoint"]
+  API --> Webhook["/telegram Endpoint"]
 ```
 
 ---
@@ -142,7 +164,7 @@ The Telegram bot will start automatically as a background task.
 ### 4. Add to Telegram Group
 
 - Add your bot to a Telegram group.
-- Use `/ask <question>` to interact with the bot.
+- Use `/ask`, `/help`, or `/connect` to interact with the bot.
 
 ---
 
@@ -162,11 +184,12 @@ docker run -p 3000:3000 --env-file .env towerbot
 
 ## 📁 Project Structure
 
-- `app/core/` — Config, prompts, tools, and lifespan (startup/shutdown logic)
+- `app/core/` — Config, constants, tools, and lifespan (startup/shutdown logic)
 - `app/services/` — AI, database, and graph services
 - `app/models/` — Data models (e.g., QA response, ontology)
-- `app/main.py` — FastAPI entrypoint
+- `app/main.py` — FastAPI entrypoint and API endpoints
 - `app/webhook.py` — Telegram webhook setup
+- `static/json/tower.json` — Building and community data for Q&A
 
 ---
 
@@ -174,7 +197,7 @@ docker run -p 3000:3000 --env-file .env towerbot
 
 We welcome contributions from everyone! To get started:
 
-1. **Fork the repo** and create your branch from `main`.
+1. **Fork the repo** and create your branch from `main` or `develop`.
 2. **Write clear, well-documented code** and add comments where helpful.
 3. **Open a pull request** with a clear description of your changes.
 4. For major changes, open an issue first to discuss what you’d like to change.
@@ -200,6 +223,7 @@ We welcome contributions from everyone! To get started:
 ## 🩺 Health Check
 
 - `GET /health`: Returns API status and message.
+- `POST /telegram`: Receives Telegram webhook updates.
 
 ---
 
@@ -211,6 +235,7 @@ We welcome contributions from everyone! To get started:
 - [LangChain](https://python.langchain.com/)
 - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
 - [Neo4j](https://neo4j.com/docs/)
+- [Graphiti](https://github.com/getzep/graphiti)
 
 ---
 
