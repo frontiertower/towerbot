@@ -11,9 +11,10 @@ from telegram.ext import (
 )
 from contextlib import asynccontextmanager
 from langchain_openai import AzureChatOpenAI
-from langgraph.store.memory import InMemoryStore
+from psycopg_pool import AsyncConnectionPool
 from apscheduler.triggers.cron import CronTrigger
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.store.postgres import AsyncPostgresStore
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
@@ -23,6 +24,9 @@ from app.services.database import DatabaseService
 from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 
 logger = logging.getLogger(__name__)
+
+store: AsyncPostgresStore | None = None
+checkpointer: AsyncPostgresSaver | None = None
 
 def is_valid_text_message(update: Update):
     return bool(update.message and update.message.text and update.message.text.strip())
@@ -99,9 +103,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.message.chat.type == "supergroup":
         await graph_service.process_telegram_message(update.message)
-
-        if settings.APP_ENV == "prod":
-            await db_service.save_message(update.message)
+        await db_service.save_message(update.message)
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -128,12 +130,12 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     response = await ai_service.run(command, text_after_command, update.message.from_user.id)
     await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-
-    if settings.APP_ENV == "prod":
-        await db_service.save_command(update.message, response, command)
+    await db_service.save_command(update.message, response, command) 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global store, checkpointer
+
     logger.info("Application startup sequence initiated...")
 
     llm = AzureChatOpenAI(
@@ -141,14 +143,20 @@ async def lifespan(app: FastAPI):
         azure_deployment=settings.MODEL
     )
 
-    store = InMemoryStore(
+    pool = AsyncConnectionPool(conninfo=settings.SUPABASE_CONN_STRING)
+
+    store = AsyncPostgresStore(
+        conn=pool,
         index={
             "dims": 1536,
-            "embed": f"azure_openai:{settings.EMBEDDING_MODEL}"
-        }
+            "embed": f"azure_openai:{settings.EMBEDDING_MODEL}",
+        },
     )
 
-    checkpointer = MemorySaver()
+    checkpointer = AsyncPostgresSaver(conn=pool)
+
+    await store.setup()
+    await checkpointer.setup()
 
     ai_service = AiService()
     db_service = DatabaseService()
@@ -156,9 +164,11 @@ async def lifespan(app: FastAPI):
 
     ai_service.connect(llm, store, checkpointer)
     db_service.connect()
+
     await graph_service.connect()
 
     tg_app = create_application(ai_service, db_service, graph_service)
+
     await tg_app.initialize()
 
     scheduler = start_scheduler(graph_service)
@@ -181,6 +191,10 @@ async def lifespan(app: FastAPI):
         if app.state.tg_app:
             await app.state.tg_app.shutdown()
             logger.info("Telegram application shut down.")
+
+        if pool:
+            await pool.close()
+            logger.info("Postgres connection pool closed.")
 
         if app.state.scheduler:
             app.state.scheduler.shutdown()
