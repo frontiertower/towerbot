@@ -263,11 +263,10 @@ async def lifespan(app: FastAPI):
         await checkpointer.setup()
 
         ai_service = AiService()
-        db_service = DatabaseService()
         graph_service = GraphService()
+        db_service = DatabaseService(pool)
 
         ai_service.connect(llm, store, checkpointer)
-        db_service.connect()
 
         await graph_service.connect()
 

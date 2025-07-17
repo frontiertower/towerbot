@@ -1,97 +1,84 @@
 """Database service module for TowerBot data persistence.
 
-This module provides the DatabaseService class for managing data storage
-operations using Supabase, including message logging and command tracking.
+This module defines the DatabaseService class, which manages asynchronous
+database operations for TowerBot using a PostgreSQL connection pool for optimal
+performance and resource management. It provides methods for saving Telegram 
+messages and tracking command executions with efficient connection pooling.
 """
 
 import json
 import logging
 
 from telegram import Message
-from supabase import create_client, Client
-
-from app.core.config import settings
+from psycopg_pool import AsyncConnectionPool
 
 logger = logging.getLogger(__name__)
 
-def get_supabase_client():
-    """Create and return a Supabase client instance.
-    
-    Returns:
-        Client: Configured Supabase client for database operations
-    """
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
-
 class DatabaseService:
-    """Service class for managing database operations.
-    
-    This class handles all database-related operations including:
-    - Connection management to Supabase
-    - Message storage and logging
-    - Command execution tracking
-    
-    Attributes:
-        supabase: Supabase client instance for database operations
     """
-    def __init__(self):
-        """Initialize the DatabaseService with empty client reference."""
-        self.supabase: Client | None = None
+    Service class for managing asynchronous database operations for TowerBot.
 
-    def connect(self):
-        """Initialize the Supabase client connection."""
-        try:
-            self.supabase = get_supabase_client()
-            logger.info("Database connection established")
-        except Exception as e:
-            logger.error(f"Failed to connect to database: {e}")
-            raise
+    This class provides asynchronous methods to interact with the PostgreSQL database,
+    including saving Telegram messages and command execution records. It uses an
+    AsyncConnectionPool for efficient, concurrent database access and optimal
+    resource management.
+
+    Attributes:
+        pool (AsyncConnectionPool): The asynchronous connection pool for database operations.
+    """
+    def __init__(self, pool: AsyncConnectionPool):
+        """
+        Initialize the DatabaseService with an async connection pool.
+
+        Args:
+            pool (AsyncConnectionPool): The asynchronous connection pool to use for database operations.
+        """
+        self.pool: AsyncConnectionPool = pool
 
     async def save_message(self, message: Message):
-        """Save a Telegram message to the database.
-        
-        Stores the complete message object as JSON in the messages table.
-        
-        Args:
-            message: Telegram message object to store
         """
-        if self.supabase is None:
-            self.connect()
+        Persist a Telegram message to the database using connection pooling.
 
+        Args:
+            message (Message): The Telegram message object to be saved.
+
+        Raises:
+            Exception: If an error occurs during the database operation.
+        """
         try:
-            message_json_string = message.to_json()
-            message_json = json.loads(message_json_string)
-
-            self.supabase.table("messages").insert({
-                "message": message_json,
-            }).execute()
+            message_json = json.loads(message.to_json())
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "INSERT INTO public.messages (message) VALUES (%s)",
+                        (json.dumps(message_json),)
+                    )
             logger.debug(f"Message {message.message_id} saved to database")
         except Exception as e:
             logger.error(f"Failed to save message {message.message_id}: {e}")
             raise
 
     async def save_command(self, message: Message, response: dict, command: str):
-        """Save a command execution record to the database.
-        
-        Stores the command message, AI response, and command type
-        in the commands table for tracking and analytics.
-        
-        Args:
-            message: Original Telegram message containing the command
-            response: AI agent response object
-            command: Command type (e.g., 'ask', 'connect')
         """
-        if self.supabase is None:
-            self.connect()
+        Save a command execution record to the database using connection pooling.
 
+        Args:
+            message (Message): The Telegram message object associated with the command.
+            response (dict): The response object returned by the command execution.
+            command (str): The command string that was executed.
+
+        Raises:
+            Exception: If an error occurs during the database operation.
+        """
         try:
-            message_json_string = message.to_json()
-            message_json = json.loads(message_json_string)
-
-            self.supabase.table("commands").insert({
-                "category": command,
-                "command": message_json,
-                "response": response.model_dump(),
-            }).execute()
+            message_json = json.loads(message.to_json())
+            response_json = response.model_dump()
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "INSERT INTO public.commands (category, command, response) VALUES (%s, %s, %s)",
+                        (command, json.dumps(message_json), json.dumps(response_json))
+                    )
             logger.debug(f"Command '{command}' from message {message.message_id} saved to database")
         except Exception as e:
             logger.error(f"Failed to save command '{command}' from message {message.message_id}: {e}")

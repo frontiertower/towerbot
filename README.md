@@ -162,7 +162,7 @@ MODEL=your-azure-chat-model          # e.g., gpt-4
 EMBEDDING_MODEL=your-embedding-model # e.g., text-embedding-ada-002
 RERANKER_MODEL=your-azure-reranking-model
 
-# Database Services
+# Database Services (Connection Pooling)
 SUPABASE_URL=your-supabase-url
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 SUPABASE_CONN_STRING=postgresql://user:pass@host:port/db
@@ -276,7 +276,7 @@ towerbot/
 │   │   └── tools.py           # Tool parameter schemas and enums
 │   ├── services/
 │   │   ├── ai.py              # AI service with LangChain agents
-│   │   ├── database.py        # Supabase database operations
+│   │   ├── database.py        # Async database operations with connection pooling
 │   │   └── graph.py           # Neo4j graph service with Graphiti
 │   ├── main.py                # FastAPI application and endpoints
 │   └── webhook.py             # Telegram webhook configuration
@@ -331,7 +331,7 @@ We welcome contributions from everyone! To get started:
 - **Connection Errors:** Check database and API credentials in `.env`
 - **Telegram Issues:** Verify bot token and webhook URL configuration
 - **Performance:** Monitor logs for slow queries and API timeouts
-- **Memory Usage:** Check graph database size and connection pooling
+- **Memory Usage:** Check graph database size and async connection pooling
 
 ---
 
