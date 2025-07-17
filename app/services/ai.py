@@ -1,7 +1,7 @@
 from langgraph.store.base import BaseStore
+from langchain_openai import AzureChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
 from app.core.constants import SYSTEM_PROMPT
@@ -13,13 +13,13 @@ class AiService:
         self.qa_agent = None
         self.connect_agent = None
 
-    def connect(self, llm: AzureChatOpenAI, embeddings: AzureOpenAIEmbeddings, store: BaseStore, checkpointer: BaseCheckpointSaver):
+    def connect(self, llm: AzureChatOpenAI, store: BaseStore, checkpointer: BaseCheckpointSaver):
         self.qa_agent = create_react_agent(
             name="Ask",
             model=llm,
             response_format=QuestionResponse,
             tools=[
-                *get_qa_agent_tools(llm, embeddings),
+                *get_qa_agent_tools(llm),
                 create_manage_memory_tool(namespace=("memories", "{user_id}")),
                 create_search_memory_tool(namespace=("memories", "{user_id}")),
             ],

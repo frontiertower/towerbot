@@ -10,11 +10,11 @@ from telegram.ext import (
     filters,
 )
 from contextlib import asynccontextmanager
+from langchain_openai import AzureChatOpenAI
 from langgraph.store.memory import InMemoryStore
 from apscheduler.triggers.cron import CronTrigger
 from langgraph.checkpoint.memory import MemorySaver
 from apscheduler.schedulers.background import BackgroundScheduler
-from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 
 from app.core.config import settings
 from app.services.ai import AiService
@@ -141,11 +141,6 @@ async def lifespan(app: FastAPI):
         azure_deployment=settings.MODEL
     )
 
-    embeddings = AzureOpenAIEmbeddings(
-        model=settings.EMBEDDING_MODEL,
-        openai_api_version="2024-12-01-preview"
-    )
-
     store = InMemoryStore(
         index={
             "dims": 1536,
@@ -159,7 +154,7 @@ async def lifespan(app: FastAPI):
     db_service = DatabaseService()
     graph_service = GraphService()
 
-    ai_service.connect(llm, embeddings, store, checkpointer)
+    ai_service.connect(llm, store, checkpointer)
     db_service.connect()
     await graph_service.connect()
 

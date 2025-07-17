@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     NOTION_API_KEY: str
     PORT: int = 3000
     RERANKER_MODEL: str
+    SUPABASE_CONN_STRING: str
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_URL: str
     WEBHOOK_URL: str
