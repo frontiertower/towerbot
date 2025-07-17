@@ -232,7 +232,14 @@ async def lifespan(app: FastAPI):
             azure_deployment=settings.MODEL
         )
 
-        pool = AsyncConnectionPool(conninfo=settings.SUPABASE_CONN_STRING)
+        # Create connection pool with proper configuration
+        pool = AsyncConnectionPool(
+            conninfo=settings.SUPABASE_CONN_STRING,
+            configure=lambda conn: conn.set_autocommit(True)
+        )
+        
+        # Open the pool explicitly as recommended
+        await pool.open()
 
         store = AsyncPostgresStore(
             conn=pool,
