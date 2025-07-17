@@ -16,6 +16,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from psycopg.rows import dict_row
 from contextlib import asynccontextmanager
 from langchain_openai import AzureChatOpenAI
 from psycopg_pool import AsyncConnectionPool
@@ -34,6 +35,12 @@ logger = logging.getLogger(__name__)
 
 store: AsyncPostgresStore | None = None
 checkpointer: AsyncPostgresSaver | None = None
+
+connection_kwargs = {
+    "autocommit": True,
+    "prepare_threshold": 0,
+    "row_factory": dict_row,
+}
 
 def is_valid_text_message(update: Update):
     """Check if an update contains a valid text message.
@@ -235,7 +242,9 @@ async def lifespan(app: FastAPI):
         # Create connection pool with proper configuration
         pool = AsyncConnectionPool(
             conninfo=settings.SUPABASE_CONN_STRING,
-            configure=lambda conn: conn.set_autocommit(True)
+            max_size=20,
+            open=False,
+            kwargs=connection_kwargs,
         )
         
         # Open the pool explicitly as recommended
