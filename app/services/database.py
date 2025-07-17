@@ -5,11 +5,14 @@ operations using Supabase, including message logging and command tracking.
 """
 
 import json
+import logging
 
 from telegram import Message
 from supabase import create_client, Client
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 def get_supabase_client():
     """Create and return a Supabase client instance.
@@ -36,7 +39,12 @@ class DatabaseService:
 
     def connect(self):
         """Initialize the Supabase client connection."""
-        self.supabase = get_supabase_client()
+        try:
+            self.supabase = get_supabase_client()
+            logger.info("Database connection established")
+        except Exception as e:
+            logger.error(f"Failed to connect to database: {e}")
+            raise
 
     async def save_message(self, message: Message):
         """Save a Telegram message to the database.
@@ -49,12 +57,17 @@ class DatabaseService:
         if self.supabase is None:
             self.connect()
 
-        message_json_string = message.to_json()
-        message_json = json.loads(message_json_string)
+        try:
+            message_json_string = message.to_json()
+            message_json = json.loads(message_json_string)
 
-        self.supabase.table("messages").insert({
-            "message": message_json,
-        }).execute()
+            self.supabase.table("messages").insert({
+                "message": message_json,
+            }).execute()
+            logger.debug(f"Message {message.message_id} saved to database")
+        except Exception as e:
+            logger.error(f"Failed to save message {message.message_id}: {e}")
+            raise
 
     async def save_command(self, message: Message, response: dict, command: str):
         """Save a command execution record to the database.
@@ -70,11 +83,16 @@ class DatabaseService:
         if self.supabase is None:
             self.connect()
 
-        message_json_string = message.to_json()
-        message_json = json.loads(message_json_string)
+        try:
+            message_json_string = message.to_json()
+            message_json = json.loads(message_json_string)
 
-        self.supabase.table("commands").insert({
-            "category": command,
-            "command": message_json,
-            "response": response.model_dump(),
-        }).execute()
+            self.supabase.table("commands").insert({
+                "category": command,
+                "command": message_json,
+                "response": response.model_dump(),
+            }).execute()
+            logger.debug(f"Command '{command}' from message {message.message_id} saved to database")
+        except Exception as e:
+            logger.error(f"Failed to save command '{command}' from message {message.message_id}: {e}")
+            raise

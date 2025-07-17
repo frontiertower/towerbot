@@ -4,6 +4,8 @@ This module provides the AiService class for managing AI agents that handle
 user queries and connection requests using LangChain and LangGraph frameworks.
 """
 
+import logging
+
 from langchain_openai import AzureChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.store.postgres.base import BasePostgresStore
@@ -13,6 +15,8 @@ from langmem import create_manage_memory_tool, create_search_memory_tool
 from app.core.constants import SYSTEM_PROMPT
 from app.models.responses import QuestionResponse, ConnectionResponse
 from app.core.tools import get_qa_agent_tools, get_connect_agent_tools
+
+logger = logging.getLogger(__name__)
 
 class AiService:
     """Service class for managing AI agents and processing user requests.
@@ -43,30 +47,35 @@ class AiService:
             store: PostgreSQL store for agent memory
             checkpointer: PostgreSQL checkpointer for conversation state
         """
-        self.qa_agent = create_react_agent(
-            name="Ask",
-            model=llm,
-            response_format=QuestionResponse,
-            tools=[
-                *get_qa_agent_tools(llm),
-                create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
-                create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
-            ],
-            store=store,
-            checkpointer=checkpointer,
-        )
-        self.connect_agent = create_react_agent(
-            name="Connect",
-            model=llm,
-            response_format=ConnectionResponse,
-            tools=[
-                *get_connect_agent_tools(),
-                create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
-                create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
-            ],
-            store=store,
-            checkpointer=checkpointer,
-        )
+        try:
+            self.qa_agent = create_react_agent(
+                name="Ask",
+                model=llm,
+                response_format=QuestionResponse,
+                tools=[
+                    *get_qa_agent_tools(llm),
+                    create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
+                    create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
+                ],
+                store=store,
+                checkpointer=checkpointer,
+            )
+            self.connect_agent = create_react_agent(
+                name="Connect",
+                model=llm,
+                response_format=ConnectionResponse,
+                tools=[
+                    *get_connect_agent_tools(),
+                    create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
+                    create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
+                ],
+                store=store,
+                checkpointer=checkpointer,
+            )
+            logger.info("AI agents initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize AI agents: {e}")
+            raise
 
     async def run(self, command: str, message: str, user_id: int):
         """Execute a command using the appropriate AI agent.
@@ -88,6 +97,7 @@ class AiService:
         agent = self.qa_agent if command == "ask" else self.connect_agent
 
         if not agent:
+            logger.error(f"Agent for command '{command}' not initialized")
             raise RuntimeError("Agent not initialized. Call connect() on startup.")
 
         messages = [
@@ -103,9 +113,14 @@ class AiService:
             }
         }
 
-        response = await agent.ainvoke(
-            {"messages": messages},
-            config=config
-        )
-
-        return response["structured_response"]
+        try:
+            logger.debug(f"Processing {command} command for user {user_id}")
+            response = await agent.ainvoke(
+                {"messages": messages},
+                config=config
+            )
+            logger.debug(f"Successfully processed {command} command for user {user_id}")
+            return response["structured_response"]
+        except Exception as e:
+            logger.error(f"Failed to process {command} command for user {user_id}: {e}")
+            raise

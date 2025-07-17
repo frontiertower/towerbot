@@ -5,6 +5,7 @@ the knowledge graph using Graphiti, including entity extraction, relationship ma
 and Telegram message processing.
 """
 
+import logging
 from datetime import timezone
 from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
@@ -20,6 +21,8 @@ from app.models.ontology import (
     User, Topic, Message, Sent, InReplyTo, BelongsTo, 
     Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn
 )
+
+logger = logging.getLogger(__name__)
 
 def get_graphiti_client():
     """Create and configure a Graphiti client instance.
@@ -134,15 +137,25 @@ class GraphService:
         Sets up the connection to the knowledge graph and optionally
         clears data and rebuilds indices in development environment.
         """
-        self.graphiti = get_graphiti_client()
-        if settings.APP_ENV == "dev":
-            await clear_data(self.graphiti.driver)
-            await self.graphiti.build_indices_and_constraints()
+        try:
+            self.graphiti = get_graphiti_client()
+            logger.info("Graph service connected to Graphiti")
+            if settings.APP_ENV == "dev":
+                await clear_data(self.graphiti.driver)
+                await self.graphiti.build_indices_and_constraints()
+                logger.info("Development environment: Graph data cleared and indices rebuilt")
+        except Exception as e:
+            logger.error(f"Failed to connect to graph service: {e}")
+            raise
 
     async def close(self):
         """Close the Graphiti client connection."""
         if self.graphiti:
-            await self.graphiti.close()
+            try:
+                await self.graphiti.close()
+                logger.info("Graph service connection closed")
+            except Exception as e:
+                logger.error(f"Error closing graph service connection: {e}")
 
     async def build_communities(self):
         """Build graph communities in production environment.
@@ -151,7 +164,11 @@ class GraphService:
         to improve search and retrieval performance.
         """
         if settings.APP_ENV == "prod" and self.graphiti:
-            await self.graphiti.build_communities()
+            try:
+                await self.graphiti.build_communities()
+                logger.info("Graph communities built successfully")
+            except Exception as e:
+                logger.error(f"Failed to build graph communities: {e}")
 
     async def process_telegram_message(self, message: TelegramMessage):
         """Process a Telegram message for knowledge graph integration.
@@ -162,8 +179,14 @@ class GraphService:
         Args:
             message: Telegram message object to process
         """
-        await self._add_structured_message(message)
-        await self._extract_entities_from_message(message)
+        try:
+            logger.debug(f"Processing message {message.message_id} for graph integration")
+            await self._add_structured_message(message)
+            await self._extract_entities_from_message(message)
+            logger.debug(f"Successfully processed message {message.message_id}")
+        except Exception as e:
+            logger.error(f"Failed to process message {message.message_id}: {e}")
+            raise
 
     async def check_user_exists(self, message: TelegramMessage):
         """Check if a user exists in the knowledge graph.

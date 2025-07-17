@@ -14,9 +14,17 @@ from app.core.lifespan import lifespan
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.StreamHandler(),
+    ]
 )
+
+# Set specific log levels for noisy libraries
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("telegram").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +39,14 @@ async def process_telegram_update(tg_app, update_data):
         tg_app: The Telegram application instance
         update_data: Raw update data from Telegram webhook
     """
-    update = Update.de_json(data=update_data, bot=tg_app.bot)
-    await tg_app.process_update(update)
-    logger.info("Finished processing Telegram update in the background.")
+    try:
+        update = Update.de_json(data=update_data, bot=tg_app.bot)
+        logger.debug(f"Processing Telegram update {update.update_id}")
+        await tg_app.process_update(update)
+        logger.info(f"Finished processing Telegram update {update.update_id}")
+    except Exception as e:
+        logger.error(f"Failed to process Telegram update: {e}")
+        raise
 
 @app.get("/health")
 def check_health():
@@ -59,9 +72,14 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
     Returns:
         dict: Status confirmation message
     """
-    logger.info("Telegram update received, queueing for background processing.")
-    tg_app = request.app.state.tg_app
-    update_data = await request.json()
-
-    background_tasks.add_task(process_telegram_update, tg_app, update_data)
-    return {"status": "ok"}
+    try:
+        update_data = await request.json()
+        update_id = update_data.get('update_id', 'unknown')
+        logger.info(f"Telegram update {update_id} received, queueing for background processing")
+        
+        tg_app = request.app.state.tg_app
+        background_tasks.add_task(process_telegram_update, tg_app, update_data)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Failed to handle Telegram update: {e}")
+        raise

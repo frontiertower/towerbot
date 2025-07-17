@@ -177,27 +177,35 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_valid_text_message(update):
         return
 
-    ai_service: AiService = context.application.bot_data["ai_service"]
-    db_service: DatabaseService = context.application.bot_data["db_service"]
-    command = update.message.text.split()[0][1:]
-    text_after_command = update.message.text[len(command) + 2:].strip()
+    try:
+        ai_service: AiService = context.application.bot_data["ai_service"]
+        db_service: DatabaseService = context.application.bot_data["db_service"]
+        command = update.message.text.split()[0][1:]
+        text_after_command = update.message.text[len(command) + 2:].strip()
+        
+        logger.debug(f"Processing command '{command}' from user {update.message.from_user.id}")
 
-    if not text_after_command:
-        example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
-        sent_message = await update.message.reply_text(
-            f"Please add some context after your command. <b>Example:</b> /{command} {example}",
-            reply_to_message_id=update.message.message_id,
-            parse_mode="HTML"
-        )
-        context.application.bot_data.setdefault("pending_commands", {})[sent_message.message_id] = {
-            "command": command,
-            "user_id": update.message.from_user.id,
-        }
-        return
+        if not text_after_command:
+            example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
+            sent_message = await update.message.reply_text(
+                f"Please add some context after your command. <b>Example:</b> /{command} {example}",
+                reply_to_message_id=update.message.message_id,
+                parse_mode="HTML"
+            )
+            context.application.bot_data.setdefault("pending_commands", {})[sent_message.message_id] = {
+                "command": command,
+                "user_id": update.message.from_user.id,
+            }
+            return
 
-    response = await ai_service.run(command, text_after_command, update.message.from_user.id)
-    await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-    await db_service.save_command(update.message, response, command) 
+        response = await ai_service.run(command, text_after_command, update.message.from_user.id)
+        await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+        await db_service.save_command(update.message, response, command)
+        logger.debug(f"Successfully processed command '{command}' from user {update.message.from_user.id}")
+    except Exception as e:
+        logger.error(f"Failed to process command '{command}' from user {update.message.from_user.id}: {e}")
+        await update.message.reply_text("Sorry, I encountered an error processing your command. Please try again later.")
+        raise 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -217,67 +225,83 @@ async def lifespan(app: FastAPI):
     global store, checkpointer
 
     logger.info("Application startup sequence initiated...")
+    
+    try:
+        llm = AzureChatOpenAI(
+            api_version="2024-12-01-preview",
+            azure_deployment=settings.MODEL
+        )
 
-    llm = AzureChatOpenAI(
-        api_version="2024-12-01-preview",
-        azure_deployment=settings.MODEL
-    )
+        pool = AsyncConnectionPool(conninfo=settings.SUPABASE_CONN_STRING)
 
-    pool = AsyncConnectionPool(conninfo=settings.SUPABASE_CONN_STRING)
+        store = AsyncPostgresStore(
+            conn=pool,
+            index={
+                "dims": 1536,
+                "embed": f"azure_openai:{settings.EMBEDDING_MODEL}",
+            },
+        )
 
-    store = AsyncPostgresStore(
-        conn=pool,
-        index={
-            "dims": 1536,
-            "embed": f"azure_openai:{settings.EMBEDDING_MODEL}",
-        },
-    )
+        checkpointer = AsyncPostgresSaver(conn=pool)
 
-    checkpointer = AsyncPostgresSaver(conn=pool)
+        await store.setup()
+        await checkpointer.setup()
 
-    await store.setup()
-    await checkpointer.setup()
+        ai_service = AiService()
+        db_service = DatabaseService()
+        graph_service = GraphService()
 
-    ai_service = AiService()
-    db_service = DatabaseService()
-    graph_service = GraphService()
+        ai_service.connect(llm, store, checkpointer)
+        db_service.connect()
 
-    ai_service.connect(llm, store, checkpointer)
-    db_service.connect()
+        await graph_service.connect()
 
-    await graph_service.connect()
+        tg_app = create_application(ai_service, db_service, graph_service)
 
-    tg_app = create_application(ai_service, db_service, graph_service)
+        await tg_app.initialize()
 
-    await tg_app.initialize()
+        scheduler = start_scheduler(graph_service)
 
-    scheduler = start_scheduler(graph_service)
+        app.state.ai_service = ai_service
+        app.state.db_service = db_service
+        app.state.graph_service = graph_service
+        app.state.tg_app = tg_app
+        app.state.scheduler = scheduler
 
-    app.state.ai_service = ai_service
-    app.state.db_service = db_service
-    app.state.graph_service = graph_service
-    app.state.tg_app = tg_app
-    app.state.scheduler = scheduler
-
-    logger.info("Application startup complete. Bot is initialized and ready.")
+        logger.info("Application startup complete. Bot is initialized and ready.")
+    except Exception as e:
+        logger.error(f"Application startup failed: {e}")
+        raise
 
     try:
         yield
     finally:
         logger.info("Application shutdown sequence initiated...")
-        await graph_service.close()
-        logger.info("Graphiti client closed.")
+        try:
+            await graph_service.close()
+            logger.info("Graphiti client closed.")
+        except Exception as e:
+            logger.error(f"Error closing Graphiti client: {e}")
 
-        if app.state.tg_app:
-            await app.state.tg_app.shutdown()
-            logger.info("Telegram application shut down.")
+        try:
+            if app.state.tg_app:
+                await app.state.tg_app.shutdown()
+                logger.info("Telegram application shut down.")
+        except Exception as e:
+            logger.error(f"Error shutting down Telegram application: {e}")
 
-        if pool:
-            await pool.close()
-            logger.info("Postgres connection pool closed.")
+        try:
+            if pool:
+                await pool.close()
+                logger.info("Postgres connection pool closed.")
+        except Exception as e:
+            logger.error(f"Error closing Postgres connection pool: {e}")
 
-        if app.state.scheduler:
-            app.state.scheduler.shutdown()
-            logger.info("APScheduler shut down.")
+        try:
+            if app.state.scheduler:
+                app.state.scheduler.shutdown()
+                logger.info("APScheduler shut down.")
+        except Exception as e:
+            logger.error(f"Error shutting down APScheduler: {e}")
 
         logger.info("Application shutdown complete.")
