@@ -81,7 +81,7 @@ def create_application(
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
     application.bot_data.update(bot_data)
     application.add_handler(CommandHandler("start", handle_start))
-    application.add_handler(CommandHandler(["ask", "help", "connect"], handle_command))
+    application.add_handler(CommandHandler(["ask", "report", "propose", "connect"], handle_command))
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
             filters.ChatType.GROUP | filters.ChatType.SUPERGROUP | filters.ChatType.PRIVATE
@@ -151,7 +151,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        await update.message.reply_text("Direct conversations are coming soon. In the meantime, you can use commands (e.g. /ask, /help, /connect).")
+        await update.message.reply_text("Direct conversations are coming soon. In the meantime, you can use commands (e.g. /ask, /report, /propose, /connect).")
         return
 
     if update.message.reply_to_message:
@@ -173,7 +173,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle bot commands like /ask, /help, and /connect.
+    """Handle bot commands like /ask, /report, /propose, and /connect.
     
     Processes bot commands by extracting the command and context,
     validating input, and routing to the appropriate AI service.

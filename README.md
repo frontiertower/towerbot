@@ -71,7 +71,8 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 ## 🚀 Features
 
 - **AI Q&A:** `/ask <question>` in Telegram, get instant, context-aware answers
-- **Help Requests:** `/help <request>` to submit issues or requests (e.g., facilities, supplies)
+- **Problem Reporting:** `/report <problem>` to report issues or requests (e.g., facilities, supplies)
+- **Idea Proposals:** `/propose <idea>` to propose new ideas or initiatives for the community
 - **Community Connections:** `/connect <interest>` to find people, projects, or resources
 - **Persistent Memory:** Stores all questions/messages for analytics and context using LangMem
 - **Vector & Graph Search:** Semantic and graph search over documents and community data
@@ -93,8 +94,10 @@ TowerBot responds to the following commands in your Telegram group:
 
 - `/ask <question>` — Get answers to questions about the building, community, or general topics.  
   _Example:_ `/ask what's the wifi password?`
-- `/help <request>` — Submit a help or maintenance request.  
-  _Example:_ `/help we need more toilet paper on the 9th floor`
+- `/report <problem>` — Report a problem or submit a maintenance request.  
+  _Example:_ `/report we need more toilet paper on the 9th floor`
+- `/propose <idea>` — Propose a new idea or initiative for the community.  
+  _Example:_ `/propose let's organize a community garden on the rooftop`
 - `/connect <interest>` — Find people, projects, or resources related to a topic.  
   _Example:_ `/connect who can help me learn more about biotech?`
 - `/start` — Get an introduction message with bot capabilities
@@ -118,7 +121,7 @@ If you use a command without context, TowerBot will prompt you for more informat
 
 ```mermaid
 graph TD;
-  TG["Telegram Group"] -->|/ask, /help, /connect| BOT["TowerBot (python-telegram-bot)"]
+  TG["Telegram Group"] -->|/ask, /report, /propose, /connect| BOT["TowerBot (python-telegram-bot)"]
   BOT --> API["FastAPI Backend"]
   API --> AI["Azure OpenAI (LangChain)"]
   API --> DB["Supabase (Vectors)"]
@@ -202,7 +205,7 @@ The Telegram bot will start automatically as a background task.
 ### 4. Add to Telegram Group
 
 - Add your bot to a Telegram group.
-- Use `/ask`, `/help`, or `/connect` to interact with the bot.
+- Use `/ask`, `/report`, `/propose`, or `/connect` to interact with the bot.
 
 ---
 

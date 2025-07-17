@@ -18,8 +18,8 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 
 from app.core.config import settings
 from app.models.ontology import (
-    User, Topic, Message, Sent, InReplyTo, BelongsTo, 
-    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn
+    User, Topic, Message, Sent, InReplyTo, SentIn, 
+    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, AssignedTo, Task, Floor, RelatedTo
 )
 
 logger = logging.getLogger(__name__)
@@ -109,26 +109,44 @@ class GraphService:
             "Message": Message,
             "Event": Event, 
             "Interest": Interest, 
-            "Project": Project
+            "Project": Project,
+            "Task": Task,
+            "Floor": Floor
         }
         self.edge_types = {
             "SENT": Sent,
-            "BELONGS_TO": BelongsTo,
+            "SENT_IN": SentIn,
             "IN_REPLY_TO": InReplyTo,
             "LOCATED_ON": LocatedOn,
             "WORKS_ON": WorksOn,
             "ATTENDS": Attends,
             "INTERESTED_IN": InterestedIn,
+            "ASSIGNED_TO": AssignedTo,
+            "RELATED_TO": RelatedTo,
         }
         self.edge_type_map = {
+            # User relationships
             ("User", "Event"): ["ATTENDS"],
             ("User", "Floor"): ["LOCATED_ON"],
-            ("Event", "Floor"): ["LOCATED_ON"],
-            ("Project", "Floor"): ["LOCATED_ON"],
             ("User", "Interest"): ["INTERESTED_IN"],
             ("User", "Project"): ["WORKS_ON"],
-            ("Event", "Interest"): ["INTERESTED_IN"],
-            ("Entity", "Entity"): ["RELATES_TO"],
+            ("User", "Task"): ["ASSIGNED_TO"],
+            
+            # Message relationships
+            ("User", "Message"): ["SENT"],
+            ("Message", "Topic"): ["SENT_IN"],
+            ("Message", "Message"): ["IN_REPLY_TO"],
+            
+            # Location relationships
+            ("Event", "Floor"): ["LOCATED_ON"],
+            ("Project", "Floor"): ["LOCATED_ON"],
+            
+            # Project relationships
+            ("Task", "Project"): ["RELATED_TO"],
+            ("Project", "Interest"): ["RELATED_TO"],
+            
+            # Event relationships
+            ("Event", "Interest"): ["RELATED_TO"],
         }
 
     async def connect(self):
@@ -181,8 +199,8 @@ class GraphService:
         """
         try:
             logger.debug(f"Processing message {message.message_id} for graph integration")
-            await self._add_structured_message(message)
-            await self._extract_entities_from_message(message)
+            await self._store_message_context(message)
+            await self._add_episode(message)
             logger.debug(f"Successfully processed message {message.message_id}")
         except Exception as e:
             logger.error(f"Failed to process message {message.message_id}: {e}")
@@ -213,7 +231,7 @@ class GraphService:
             return len(records) > 0
         return bool(result)
 
-    async def _add_structured_message(self, message: TelegramMessage):
+    async def _store_message_context(self, message: TelegramMessage):
         """Add structured message data to the knowledge graph.
         
         Creates or updates User, Topic, and Message nodes and establishes
@@ -294,31 +312,45 @@ class GraphService:
         )
 
         await self._add_edge("SENT", user_node.user_id, message_node.message_id, "User", "Message")
-        await self._add_edge("BELONGS_TO", message_node.message_id, topic_node.topic_id, "Message", "Topic")
+        await self._add_edge("SENT_IN", message_node.message_id, topic_node.topic_id, "Message", "Topic")
 
-        if message.reply_to_message:
+        if message.reply_to_message and not message.reply_to_message.forum_topic_created:
             parent_message_id = message.reply_to_message.message_id
-            cypher = "MATCH (n:Message {message_id: $message_id}) RETURN n"
-            result = await self.graphiti.driver.execute_query(cypher, message_id=parent_message_id)
+            await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
 
-            if result and isinstance(result[0], dict) and 'n' in result[0]:
-                await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
-
-    async def _add_edge(self, edge_type: str, from_id: int, to_id: int, from_label: str, to_label: str):
+    async def _add_edge(
+        self,
+        edge_type: str,
+        from_id: int,
+        to_id: int,
+        from_label: str,
+        to_label: str
+    ):
         """Add an edge relationship between two nodes in the graph.
-        
+
+        This method uses MERGE to idempotently create the nodes and the relationship,
+        preventing errors if a node does not yet exist.
+
         Args:
-            edge_type: Type of edge to create (e.g., 'SENT', 'BELONGS_TO')
+            edge_type: Type of edge to create (e.g., 'SENT', 'IN_REPLY_TO')
             from_id: ID of the source node
             to_id: ID of the target node
             from_label: Label of the source node type
             to_label: Label of the target node type
         """
-        from_id_field = "user_id" if from_label == "User" else "message_id" if from_label == "Message" else "topic_id"
-        to_id_field = "user_id" if to_label == "User" else "message_id" if to_label == "Message" else "topic_id"
-        
+        # Map node labels to their unique identifier fields
+        id_fields = {
+            "User": "user_id",
+            "Message": "message_id",
+            "Topic": "topic_id"
+        }
+        from_id_field = id_fields.get(from_label, "id")
+        to_id_field = id_fields.get(to_label, "id")
+
+        # Use MERGE to find or create nodes, then MERGE the relationship
         cypher = f"""
-        MATCH (a:{from_label} {{{from_id_field}: $from_id}}), (b:{to_label} {{{to_id_field}: $to_id}})
+        MERGE (a:{from_label} {{{from_id_field}: $from_id}})
+        MERGE (b:{to_label} {{{to_id_field}: $to_id}})
         MERGE (a)-[r:{edge_type}]->(b)
         RETURN r
         """
@@ -328,14 +360,15 @@ class GraphService:
             to_id=to_id
         )
 
-    async def _extract_entities_from_message(self, message: TelegramMessage):
-        """Extract entities and relationships from message content.
-        
-        Uses Graphiti's entity extraction capabilities to identify and store
-        entities and relationships mentioned in the message content.
-        
+    async def _add_episode(self, message: TelegramMessage):
+        """Add a new episode to the knowledge graph for a Telegram message.
+
+        This method creates an episode in the knowledge graph representing the provided
+        Telegram message, extracting and storing relevant entities and relationships
+        (excluding User, Topic, and Message types) using Graphiti's processing.
+
         Args:
-            message: Telegram message to analyze for entity extraction
+            message: The Telegram message to be represented as an episode in the graph.
         """
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
@@ -345,7 +378,7 @@ class GraphService:
             reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
             entity_types=self.entity_types,
-            excluded_entity_types=["User", "Topic", "Message"],
+            excluded_entity_types=["User", "Topic", "Message", "Floor"],
             edge_types=self.edge_types,
             edge_type_map=self.edge_type_map,
             update_communities=True,

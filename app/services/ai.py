@@ -84,7 +84,7 @@ class AiService:
         the command type and processes the user's message.
         
         Args:
-            command: The command type ('ask' or 'connect')
+            command: The command type ('ask', 'report', 'propose', or 'connect')
             message: User's message content
             user_id: Unique identifier for the user
             
@@ -94,7 +94,7 @@ class AiService:
         Raises:
             RuntimeError: If agents are not initialized
         """
-        agent = self.qa_agent if command == "ask" else self.connect_agent
+        agent = self.qa_agent if command in ["ask", "report", "propose"] else self.connect_agent
 
         if not agent:
             logger.error(f"Agent for command '{command}' not initialized")
