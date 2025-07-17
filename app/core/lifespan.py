@@ -40,6 +40,7 @@ checkpointer: AsyncPostgresSaver | None = None
 connection_kwargs = {
     "autocommit": True,
     "row_factory": dict_row,
+    "prepare_threshold": None,
 }
 
 def is_valid_text_message(update: Update):
