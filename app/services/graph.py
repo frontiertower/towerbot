@@ -164,7 +164,7 @@ class GraphService:
         topic_id = message.message_thread_id
         topic_name = "General"
 
-        if message.reply_to_message.forum_topic_created:
+        if message.reply_to_message and message.reply_to_message.forum_topic_created:
             topic_name = message.reply_to_message.forum_topic_created.name
         if not topic_id:
             topic_id = message.chat.id
