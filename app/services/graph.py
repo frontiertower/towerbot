@@ -182,7 +182,7 @@ class GraphService:
         try:
             logger.debug(f"Processing message {message.message_id} for graph integration")
             await self._add_structured_message(message)
-            await self._extract_entities_from_message(message)
+            await self._add_episode(message)
             logger.debug(f"Successfully processed message {message.message_id}")
         except Exception as e:
             logger.error(f"Failed to process message {message.message_id}: {e}")
@@ -328,14 +328,15 @@ class GraphService:
             to_id=to_id
         )
 
-    async def _extract_entities_from_message(self, message: TelegramMessage):
-        """Extract entities and relationships from message content.
-        
-        Uses Graphiti's entity extraction capabilities to identify and store
-        entities and relationships mentioned in the message content.
-        
+    async def _add_episode(self, message: TelegramMessage):
+        """Add a new episode to the knowledge graph for a Telegram message.
+
+        This method creates an episode in the knowledge graph representing the provided
+        Telegram message, extracting and storing relevant entities and relationships
+        (excluding User, Topic, and Message types) using Graphiti's processing.
+
         Args:
-            message: Telegram message to analyze for entity extraction
+            message: The Telegram message to be represented as an episode in the graph.
         """
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
