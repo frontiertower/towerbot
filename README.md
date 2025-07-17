@@ -34,9 +34,14 @@ TowerBot connects your Telegram group to powerful AI and community data. It can 
 - **Supabase** (vector search)
 - **Neo4j** (graph database)
 - **Graphiti** (temporal knowledge graph)
+- **APScheduler** (scheduled jobs)
+- **LangChain, LangGraph, LangMem** (advanced LLM/graph features)
+- **Pydantic** (settings and validation)
+- **psycopg_pool** (async Postgres connection pool)
 - **Docker** (optional, for deployment)
+- **uv** (Python package/dependency/runtime manager)
 
-Dependencies are managed in `pyproject.toml`.
+Dependencies are managed in `pyproject.toml` and installed using [`uv`](https://github.com/astral-sh/uv).
 
 ---
 
@@ -73,6 +78,7 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 - **Building & Community Info:** Answers questions about the building, amenities, events, and more using structured data
 - **Health Check:** `/health` endpoint for monitoring
 - **Webhook Endpoint:** `/telegram` endpoint for Telegram updates
+- **Scheduled Community Analytics:** Uses APScheduler to run periodic community graph updates
 
 ---
 
@@ -113,7 +119,9 @@ graph TD;
 ```bash
 git clone <your-repo-url>
 cd towerbot
-pip install -r requirements.txt
+pip install uv  # if you don't have it already
+uv pip install --system  # ensure uv is set up for your Python
+uv sync  # install all dependencies from pyproject.toml
 ```
 
 ### 2. Environment Setup
@@ -170,8 +178,8 @@ The Telegram bot will start automatically as a background task.
 
 ## 🧑‍💻 Local Development & Testing
 
-- Use `uvicorn app.main:app --reload` for hot-reloading during development.
-- Update dependencies in `pyproject.toml` as needed.
+- Use `uv run uvicorn app.main:app --reload` for hot-reloading during development.
+- Update dependencies in `pyproject.toml` as needed and run `uv sync` to install.
 - Write tests for new features (test framework coming soon).
 - Use Docker for consistent local environments:
 
@@ -184,12 +192,16 @@ docker run -p 3000:3000 --env-file .env towerbot
 
 ## 📁 Project Structure
 
-- `app/core/` — Config, constants, tools, and lifespan (startup/shutdown logic)
+- `app/core/` — Config, constants, shared tools, and startup/shutdown logic (`lifespan.py`)
 - `app/services/` — AI, database, and graph services
-- `app/models/` — Data models (e.g., QA response, ontology)
+- `app/models/` — Data models (ontology, responses, tools)
 - `app/main.py` — FastAPI entrypoint and API endpoints
 - `app/webhook.py` — Telegram webhook setup
 - `static/json/tower.json` — Building and community data for Q&A
+- `supabase/` — Supabase config and related files
+- `pyproject.toml` — Project dependencies and metadata
+- `startup.sh` — Local startup script
+- `Dockerfile` — Container build instructions
 
 ---
 
@@ -236,6 +248,7 @@ We welcome contributions from everyone! To get started:
 - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
 - [Neo4j](https://neo4j.com/docs/)
 - [Graphiti](https://github.com/getzep/graphiti)
+- [uv (Python package manager)](https://github.com/astral-sh/uv)
 
 ---
 
