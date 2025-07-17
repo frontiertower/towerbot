@@ -35,29 +35,6 @@ class DatabaseService:
         """
         self.pool: AsyncConnectionPool = pool
 
-    async def save_message(self, message: Message):
-        """
-        Persist a Telegram message to the database using connection pooling.
-
-        Args:
-            message (Message): The Telegram message object to be saved.
-
-        Raises:
-            Exception: If an error occurs during the database operation.
-        """
-        try:
-            message_json = json.loads(message.to_json())
-            async with self.pool.connection() as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(
-                        "INSERT INTO public.messages (message) VALUES (%s)",
-                        (json.dumps(message_json),)
-                    )
-            logger.debug(f"Message {message.message_id} saved to database")
-        except Exception as e:
-            logger.error(f"Failed to save message {message.message_id}: {e}")
-            raise
-
     async def save_command(self, message: Message, response: dict, command: str):
         """
         Save a command execution record to the database using connection pooling.

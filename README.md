@@ -31,7 +31,7 @@ TowerBot connects your Telegram group to powerful AI and community data. It can 
 - **FastAPI** (API backend)
 - **python-telegram-bot** (Telegram integration)
 - **Azure OpenAI** (LLM via LangChain)
-- **Supabase** (vector search)
+- **Supabase** (memory)
 - **Neo4j** (graph database)
 - **Graphiti** (temporal knowledge graph)
 - **APScheduler** (scheduled jobs)
@@ -103,12 +103,14 @@ TowerBot responds to the following commands in your Telegram group:
 - `/start` — Get an introduction message with bot capabilities
 
 **Available Tools:**
+
 - **Tower Information:** Access building details, amenities, and floor plans
 - **Calendar Events:** Get upcoming events from the community calendar
 - **Community Search:** Find connections and relationships in the community graph
 - **Memory Management:** Persistent conversation memory for better context
 
 **Message Processing:**
+
 - All group messages are processed for entity extraction and graph building
 - Reply-based command continuation for complex queries
 - Private message validation (members only)
@@ -166,9 +168,7 @@ EMBEDDING_MODEL=your-embedding-model # e.g., text-embedding-ada-002
 RERANKER_MODEL=your-azure-reranking-model
 
 # Database Services (Connection Pooling)
-SUPABASE_URL=your-supabase-url
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-SUPABASE_CONN_STRING=postgresql://user:pass@host:port/db
+POSTGRES_CONN_STRING=postgresql://user:pass@host:port/db
 
 # Neo4j Graph Database
 NEO4J_URI=your-neo4j-uri            # e.g., bolt://localhost:7687
@@ -212,6 +212,7 @@ The Telegram bot will start automatically as a background task.
 ## 🧑‍💻 Local Development & Testing
 
 ### Development Server
+
 ```bash
 # Hot-reloading development server
 uv run uvicorn app.main:app --reload --port 3000 --host 0.0.0.0
@@ -221,6 +222,7 @@ uv run uvicorn app.main:app --reload --port 3000 --host 0.0.0.0
 ```
 
 ### Dependency Management
+
 ```bash
 # Update dependencies in pyproject.toml
 uv sync                    # Install/update all dependencies
@@ -229,6 +231,7 @@ uv remove package-name     # Remove a dependency
 ```
 
 ### Environment Setup
+
 ```bash
 # Development environment
 export APP_ENV=dev
@@ -238,6 +241,7 @@ export APP_ENV=prod
 ```
 
 ### Docker Development
+
 ```bash
 # Build and run with Docker
 docker build -t towerbot .
@@ -245,6 +249,7 @@ docker run -p 3000:3000 --env-file .env towerbot
 ```
 
 ### Code Quality
+
 ```bash
 # Check Python syntax
 python -m py_compile app/**/*.py
@@ -256,6 +261,7 @@ python -m py_compile app/**/*.py
 ```
 
 ### Testing
+
 - All Python files are syntax-checked during development
 - Comprehensive error handling with structured logging
 - Health check endpoint for monitoring: `GET /health`
@@ -295,6 +301,7 @@ towerbot/
 ```
 
 **Key Components:**
+
 - **Core Services:** AI agents, database operations, graph processing
 - **Data Models:** Structured schemas for entities, responses, and tools
 - **API Layer:** FastAPI endpoints for health checks and webhook handling
@@ -331,6 +338,7 @@ We welcome contributions from everyone! To get started:
 - See the resources below for tech-specific help
 
 ### Common Issues
+
 - **Connection Errors:** Check database and API credentials in `.env`
 - **Telegram Issues:** Verify bot token and webhook URL configuration
 - **Performance:** Monitor logs for slow queries and API timeouts
@@ -341,10 +349,12 @@ We welcome contributions from everyone! To get started:
 ## 🩺 Health Check & Monitoring
 
 ### API Endpoints
+
 - `GET /health`: Returns API status and message
 - `POST /telegram`: Receives Telegram webhook updates
 
 ### Logging & Monitoring
+
 - **Structured Logging:** Function names, line numbers, and context
 - **Error Tracking:** Comprehensive exception logging with stack traces
 - **Performance Monitoring:** Request/response timing and processing logs
@@ -352,6 +362,7 @@ We welcome contributions from everyone! To get started:
 - **Log Levels:** Configurable DEBUG, INFO, WARNING, ERROR levels
 
 ### Health Check Response
+
 ```json
 {
   "status": "ok",
@@ -360,6 +371,7 @@ We welcome contributions from everyone! To get started:
 ```
 
 ### Application Lifecycle
+
 - **Startup:** Service initialization with connection validation
 - **Runtime:** Background message processing and scheduled tasks
 - **Shutdown:** Graceful cleanup of connections and resources
