@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from langchain_openai import AzureChatOpenAI
 from psycopg_pool import AsyncConnectionPool
 from apscheduler.triggers.cron import CronTrigger
-from langgraph.store.postgres import AsyncPostgresStore
+from langgraph.store.postgres.aio import AsyncPostgresStore
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -33,12 +33,12 @@ from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 
 logger = logging.getLogger(__name__)
 
+pool: AsyncConnectionPool | None = None
 store: AsyncPostgresStore | None = None
 checkpointer: AsyncPostgresSaver | None = None
 
 connection_kwargs = {
     "autocommit": True,
-    "prepare_threshold": 0,
     "row_factory": dict_row,
 }
 
@@ -229,7 +229,7 @@ async def lifespan(app: FastAPI):
     Yields:
         None: Control to the application runtime
     """
-    global store, checkpointer
+    global pool, store, checkpointer
 
     logger.info("Application startup sequence initiated...")
     
@@ -250,14 +250,14 @@ async def lifespan(app: FastAPI):
         await pool.open()
 
         store = AsyncPostgresStore(
-            conn=pool,
+            pool,
             index={
                 "dims": 1536,
                 "embed": f"azure_openai:{settings.EMBEDDING_MODEL}",
             },
         )
 
-        checkpointer = AsyncPostgresSaver(conn=pool)
+        checkpointer = AsyncPostgresSaver(pool)
 
         await store.setup()
         await checkpointer.setup()
