@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from langchain_openai import AzureChatOpenAI
 from psycopg_pool import AsyncConnectionPool
 from apscheduler.triggers.cron import CronTrigger
-from langgraph.store.postgres import AsyncPostgresStore
+from langgraph.store.postgres.aio import AsyncPostgresStore
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -39,7 +39,6 @@ checkpointer: AsyncPostgresSaver | None = None
 
 connection_kwargs = {
     "autocommit": True,
-    "prepare_threshold": 0,
     "row_factory": dict_row,
 }
 
