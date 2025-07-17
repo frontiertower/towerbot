@@ -1,3 +1,10 @@
+"""Application lifespan management module for TowerBot.
+
+This module handles the startup and shutdown lifecycle of the TowerBot application,
+including initialization of services, Telegram bot setup, database connections,
+and background task scheduling.
+"""
+
 import logging
 
 from fastapi import FastAPI
@@ -29,6 +36,14 @@ store: AsyncPostgresStore | None = None
 checkpointer: AsyncPostgresSaver | None = None
 
 def is_valid_text_message(update: Update):
+    """Check if an update contains a valid text message.
+    
+    Args:
+        update: Telegram update object
+        
+    Returns:
+        bool: True if the update contains a non-empty text message
+    """
     return bool(update.message and update.message.text and update.message.text.strip())
 
 def create_application(
@@ -36,6 +51,19 @@ def create_application(
     db_service: DatabaseService,
     graph_service: GraphService,
 ):
+    """Create and configure the Telegram bot application.
+    
+    Sets up the Telegram bot with all necessary handlers and injects
+    the required services into the bot's data context.
+    
+    Args:
+        ai_service: AI service instance for processing commands
+        db_service: Database service for data persistence
+        graph_service: Graph service for knowledge graph operations
+        
+    Returns:
+        Application: Configured Telegram bot application
+    """
     bot_data = {
         "ai_service": ai_service,
         "db_service": db_service,
@@ -57,6 +85,17 @@ def create_application(
     return application
 
 def start_scheduler(graph_service: GraphService):
+    """Start the background task scheduler.
+    
+    Configures and starts a background scheduler for periodic tasks
+    like building graph communities.
+    
+    Args:
+        graph_service: Graph service instance for scheduled operations
+        
+    Returns:
+        BackgroundScheduler: Started scheduler instance
+    """
     scheduler = BackgroundScheduler()
     scheduler.add_job(graph_service.build_communities, CronTrigger(hour=0, minute=0))
     scheduler.start()
@@ -65,9 +104,28 @@ def start_scheduler(graph_service: GraphService):
     return scheduler
 
 async def handle_start(update: Update, _: ContextTypes.DEFAULT_TYPE):
+    """Handle the /start command.
+    
+    Sends an introduction message to users who send the /start command.
+    
+    Args:
+        update: Telegram update containing the command
+        _: Telegram context (unused)
+    """
     await update.message.reply_text(INTRODUCTION)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle incoming text messages.
+    
+    Processes text messages based on chat type and context:
+    - Private chats: Validates user membership and provides guidance
+    - Group chats: Processes messages for graph extraction and storage
+    - Handles reply-based command continuation
+    
+    Args:
+        update: Telegram update containing the message
+        context: Telegram context with bot data and state
+    """
     if not is_valid_text_message(update):
         return
 
@@ -107,6 +165,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle bot commands like /ask, /help, and /connect.
+    
+    Processes bot commands by extracting the command and context,
+    validating input, and routing to the appropriate AI service.
+    
+    Args:
+        update: Telegram update containing the command
+        context: Telegram context with bot data and state
+    """
     if not is_valid_text_message(update):
         return
 
@@ -134,6 +201,19 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan context manager.
+    
+    Manages the complete lifecycle of the TowerBot application:
+    - Startup: Initializes services, connections, and background tasks
+    - Runtime: Maintains application state
+    - Shutdown: Cleanly closes connections and stops services
+    
+    Args:
+        app: FastAPI application instance
+        
+    Yields:
+        None: Control to the application runtime
+    """
     global store, checkpointer
 
     logger.info("Application startup sequence initiated...")

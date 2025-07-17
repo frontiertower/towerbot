@@ -1,3 +1,9 @@
+"""Core tools and utilities for TowerBot AI agents.
+
+This module provides tools for external API integrations, graph search functionality,
+and agent utilities used by the QA and Connect agents.
+"""
+
 import json
 import httpx
 
@@ -45,6 +51,11 @@ SEARCH_RECIPE_MAP = {
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_RRF: COMMUNITY_HYBRID_SEARCH_RRF,
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_MMR: COMMUNITY_HYBRID_SEARCH_MMR,
 }
+"""Mapping of search recipe enums to their corresponding configuration objects.
+
+This dictionary maps the SearchRecipeEnum values to their actual Graphiti search
+configuration objects for use in graph search operations.
+"""
 
 async def get_jwt_token():
     """
@@ -212,12 +223,25 @@ async def get_connections(
 
 
 def get_qa_agent_tools(llm: AzureChatOpenAI):
+    """Get the list of tools available to the QA agent.
+    
+    Args:
+        llm: Azure OpenAI language model instance
+        
+    Returns:
+        list: List of tools for the QA agent
+    """
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
     ]
 
 def get_connect_agent_tools():
+    """Get the list of tools available to the Connect agent.
+    
+    Returns:
+        list: List of tools for the Connect agent
+    """
     return [
         get_connections,
     ]
