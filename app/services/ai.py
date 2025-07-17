@@ -20,8 +20,8 @@ class AiService:
             response_format=QuestionResponse,
             tools=[
                 *get_qa_agent_tools(llm),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
+                create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
+                create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
             ],
             store=store,
             checkpointer=checkpointer,
@@ -32,8 +32,8 @@ class AiService:
             response_format=ConnectionResponse,
             tools=[
                 *get_connect_agent_tools(),
-                create_manage_memory_tool(namespace=("memories", "{user_id}")),
-                create_search_memory_tool(namespace=("memories", "{user_id}")),
+                create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
+                create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
             ],
             store=store,
             checkpointer=checkpointer,
