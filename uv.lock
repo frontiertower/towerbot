@@ -1305,6 +1305,9 @@ wheels = [
 binary = [
     { name = "psycopg-binary", marker = "implementation_name != 'pypy'" },
 ]
+pool = [
+    { name = "psycopg-pool" },
+]
 
 [[package]]
 name = "psycopg-binary"
@@ -1860,7 +1863,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "langgraph-checkpoint-postgres" },
     { name = "langmem" },
-    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-telegram-bot" },
@@ -1879,7 +1882,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=0.5.2" },
     { name = "langgraph-checkpoint-postgres", specifier = ">=2.0.23" },
     { name = "langmem", specifier = ">=0.0.28" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.9" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.9" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "python-telegram-bot", specifier = ">=22.2" },

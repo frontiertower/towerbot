@@ -243,7 +243,6 @@ async def lifespan(app: FastAPI):
         pool = AsyncConnectionPool(
             conninfo=settings.SUPABASE_CONN_STRING,
             max_size=20,
-            open=False,
             kwargs=connection_kwargs,
         )
         
