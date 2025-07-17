@@ -1,3 +1,11 @@
+"""Graph service module for TowerBot knowledge graph operations.
+
+This module provides the GraphService class and related functionality for managing
+the knowledge graph using Graphiti, including entity extraction, relationship mapping,
+and Telegram message processing.
+"""
+
+import logging
 from datetime import timezone
 from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
@@ -14,7 +22,17 @@ from app.models.ontology import (
     Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn
 )
 
+logger = logging.getLogger(__name__)
+
 def get_graphiti_client():
+    """Create and configure a Graphiti client instance.
+    
+    Initializes a Graphiti client with Azure OpenAI services for LLM operations,
+    embeddings, and cross-encoding, along with Neo4j database connectivity.
+    
+    Returns:
+        Graphiti: Configured Graphiti client instance
+    """
     api_key = settings.AZURE_OPENAI_API_KEY
     api_version = "2024-12-01-preview"
     llm_endpoint = settings.AZURE_OPENAI_ENDPOINT
@@ -68,7 +86,22 @@ def get_graphiti_client():
     )
 
 class GraphService:
+    """Service class for managing knowledge graph operations.
+    
+    This class handles all graph-related operations including:
+    - Connection management to the Graphiti knowledge graph
+    - Processing Telegram messages for entity extraction
+    - Managing structured data storage and relationships
+    - Building and maintaining graph communities
+    
+    Attributes:
+        graphiti: The Graphiti client instance
+        entity_types: Mapping of entity type names to their classes
+        edge_types: Mapping of edge type names to their classes
+        edge_type_map: Mapping of entity type pairs to allowed edge types
+    """
     def __init__(self):
+        """Initialize the GraphService with entity and edge type mappings."""
         self.graphiti: Graphiti | None = None
         self.entity_types = {
             "User": User, 
@@ -99,24 +132,71 @@ class GraphService:
         }
 
     async def connect(self):
-        self.graphiti = get_graphiti_client()
-        if settings.APP_ENV == "dev":
-            await clear_data(self.graphiti.driver)
-            await self.graphiti.build_indices_and_constraints()
+        """Initialize the Graphiti client connection.
+        
+        Sets up the connection to the knowledge graph and optionally
+        clears data and rebuilds indices in development environment.
+        """
+        try:
+            self.graphiti = get_graphiti_client()
+            logger.info("Graph service connected to Graphiti")
+            if settings.APP_ENV == "dev":
+                await clear_data(self.graphiti.driver)
+                await self.graphiti.build_indices_and_constraints()
+                logger.info("Development environment: Graph data cleared and indices rebuilt")
+        except Exception as e:
+            logger.error(f"Failed to connect to graph service: {e}")
+            raise
 
     async def close(self):
+        """Close the Graphiti client connection."""
         if self.graphiti:
-            await self.graphiti.close()
+            try:
+                await self.graphiti.close()
+                logger.info("Graph service connection closed")
+            except Exception as e:
+                logger.error(f"Error closing graph service connection: {e}")
 
     async def build_communities(self):
+        """Build graph communities in production environment.
+        
+        Creates community structures within the knowledge graph
+        to improve search and retrieval performance.
+        """
         if settings.APP_ENV == "prod" and self.graphiti:
-            await self.graphiti.build_communities()
+            try:
+                await self.graphiti.build_communities()
+                logger.info("Graph communities built successfully")
+            except Exception as e:
+                logger.error(f"Failed to build graph communities: {e}")
 
     async def process_telegram_message(self, message: TelegramMessage):
-        await self._add_structured_message(message)
-        await self._extract_entities_from_message(message)
+        """Process a Telegram message for knowledge graph integration.
+        
+        Handles both structured message storage and entity extraction
+        from the message content.
+        
+        Args:
+            message: Telegram message object to process
+        """
+        try:
+            logger.debug(f"Processing message {message.message_id} for graph integration")
+            await self._add_structured_message(message)
+            await self._extract_entities_from_message(message)
+            logger.debug(f"Successfully processed message {message.message_id}")
+        except Exception as e:
+            logger.error(f"Failed to process message {message.message_id}: {e}")
+            raise
 
     async def check_user_exists(self, message: TelegramMessage):
+        """Check if a user exists in the knowledge graph.
+        
+        Args:
+            message: Telegram message containing user information
+            
+        Returns:
+            bool: True if user exists in the graph, False otherwise
+        """
         user_id = message.from_user.id
         cypher = """
         MATCH (n:User {user_id: $user_id})
@@ -134,6 +214,14 @@ class GraphService:
         return bool(result)
 
     async def _add_structured_message(self, message: TelegramMessage):
+        """Add structured message data to the knowledge graph.
+        
+        Creates or updates User, Topic, and Message nodes and establishes
+        relationships between them based on the Telegram message structure.
+        
+        Args:
+            message: Telegram message to process and store
+        """
         user_info = message.from_user
         user_id = user_info.id
         user_node = None
@@ -217,6 +305,15 @@ class GraphService:
                 await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
 
     async def _add_edge(self, edge_type: str, from_id: int, to_id: int, from_label: str, to_label: str):
+        """Add an edge relationship between two nodes in the graph.
+        
+        Args:
+            edge_type: Type of edge to create (e.g., 'SENT', 'BELONGS_TO')
+            from_id: ID of the source node
+            to_id: ID of the target node
+            from_label: Label of the source node type
+            to_label: Label of the target node type
+        """
         from_id_field = "user_id" if from_label == "User" else "message_id" if from_label == "Message" else "topic_id"
         to_id_field = "user_id" if to_label == "User" else "message_id" if to_label == "Message" else "topic_id"
         
@@ -232,6 +329,14 @@ class GraphService:
         )
 
     async def _extract_entities_from_message(self, message: TelegramMessage):
+        """Extract entities and relationships from message content.
+        
+        Uses Graphiti's entity extraction capabilities to identify and store
+        entities and relationships mentioned in the message content.
+        
+        Args:
+            message: Telegram message to analyze for entity extraction
+        """
         await self.graphiti.add_episode(
             name=f"telegram_message_{message.message_id}",
             episode_body=message.to_json(),

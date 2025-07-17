@@ -1,8 +1,15 @@
+"""Tool models and schemas for TowerBot graph search operations.
+
+This module defines enumerations and schemas for graph search functionality,
+including node types, edge types, and search configuration options.
+"""
+
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 class NodeTypeEnum(str, Enum):
+    """Enumeration of node types in the knowledge graph."""
     User = "User"
     Floor = "Floor"
     Event = "Event"
@@ -10,12 +17,18 @@ class NodeTypeEnum(str, Enum):
     Project = "Project"
 
 class EdgeTypeEnum(str, Enum):
+    """Enumeration of edge types in the knowledge graph."""
     WorksOn = "WorksOn"
     Attends = "Attends"
     LocatedOn = "LocatedOn"
     InterestedIn = "InterestedIn"
 
 class SearchRecipeEnum(str, Enum):
+    """Enumeration of available search recipes for graph queries.
+    
+    Each recipe represents a different search strategy optimized for
+    specific types of queries and result preferences.
+    """
     COMBINED_HYBRID_SEARCH_MMR = "COMBINED_HYBRID_SEARCH_MMR"
     COMBINED_HYBRID_SEARCH_CROSS_ENCODER = "COMBINED_HYBRID_SEARCH_CROSS_ENCODER"
     EDGE_HYBRID_SEARCH_RRF = "EDGE_HYBRID_SEARCH_RRF"

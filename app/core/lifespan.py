@@ -1,3 +1,10 @@
+"""Application lifespan management module for TowerBot.
+
+This module handles the startup and shutdown lifecycle of the TowerBot application,
+including initialization of services, Telegram bot setup, database connections,
+and background task scheduling.
+"""
+
 import logging
 
 from fastapi import FastAPI
@@ -29,6 +36,14 @@ store: AsyncPostgresStore | None = None
 checkpointer: AsyncPostgresSaver | None = None
 
 def is_valid_text_message(update: Update):
+    """Check if an update contains a valid text message.
+    
+    Args:
+        update: Telegram update object
+        
+    Returns:
+        bool: True if the update contains a non-empty text message
+    """
     return bool(update.message and update.message.text and update.message.text.strip())
 
 def create_application(
@@ -36,6 +51,19 @@ def create_application(
     db_service: DatabaseService,
     graph_service: GraphService,
 ):
+    """Create and configure the Telegram bot application.
+    
+    Sets up the Telegram bot with all necessary handlers and injects
+    the required services into the bot's data context.
+    
+    Args:
+        ai_service: AI service instance for processing commands
+        db_service: Database service for data persistence
+        graph_service: Graph service for knowledge graph operations
+        
+    Returns:
+        Application: Configured Telegram bot application
+    """
     bot_data = {
         "ai_service": ai_service,
         "db_service": db_service,
@@ -57,6 +85,17 @@ def create_application(
     return application
 
 def start_scheduler(graph_service: GraphService):
+    """Start the background task scheduler.
+    
+    Configures and starts a background scheduler for periodic tasks
+    like building graph communities.
+    
+    Args:
+        graph_service: Graph service instance for scheduled operations
+        
+    Returns:
+        BackgroundScheduler: Started scheduler instance
+    """
     scheduler = BackgroundScheduler()
     scheduler.add_job(graph_service.build_communities, CronTrigger(hour=0, minute=0))
     scheduler.start()
@@ -65,9 +104,28 @@ def start_scheduler(graph_service: GraphService):
     return scheduler
 
 async def handle_start(update: Update, _: ContextTypes.DEFAULT_TYPE):
+    """Handle the /start command.
+    
+    Sends an introduction message to users who send the /start command.
+    
+    Args:
+        update: Telegram update containing the command
+        _: Telegram context (unused)
+    """
     await update.message.reply_text(INTRODUCTION)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle incoming text messages.
+    
+    Processes text messages based on chat type and context:
+    - Private chats: Validates user membership and provides guidance
+    - Group chats: Processes messages for graph extraction and storage
+    - Handles reply-based command continuation
+    
+    Args:
+        update: Telegram update containing the message
+        context: Telegram context with bot data and state
+    """
     if not is_valid_text_message(update):
         return
 
@@ -107,97 +165,143 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle bot commands like /ask, /help, and /connect.
+    
+    Processes bot commands by extracting the command and context,
+    validating input, and routing to the appropriate AI service.
+    
+    Args:
+        update: Telegram update containing the command
+        context: Telegram context with bot data and state
+    """
     if not is_valid_text_message(update):
         return
 
-    ai_service: AiService = context.application.bot_data["ai_service"]
-    db_service: DatabaseService = context.application.bot_data["db_service"]
-    command = update.message.text.split()[0][1:]
-    text_after_command = update.message.text[len(command) + 2:].strip()
+    try:
+        ai_service: AiService = context.application.bot_data["ai_service"]
+        db_service: DatabaseService = context.application.bot_data["db_service"]
+        command = update.message.text.split()[0][1:]
+        text_after_command = update.message.text[len(command) + 2:].strip()
+        
+        logger.debug(f"Processing command '{command}' from user {update.message.from_user.id}")
 
-    if not text_after_command:
-        example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
-        sent_message = await update.message.reply_text(
-            f"Please add some context after your command. <b>Example:</b> /{command} {example}",
-            reply_to_message_id=update.message.message_id,
-            parse_mode="HTML"
-        )
-        context.application.bot_data.setdefault("pending_commands", {})[sent_message.message_id] = {
-            "command": command,
-            "user_id": update.message.from_user.id,
-        }
-        return
+        if not text_after_command:
+            example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
+            sent_message = await update.message.reply_text(
+                f"Please add some context after your command. <b>Example:</b> /{command} {example}",
+                reply_to_message_id=update.message.message_id,
+                parse_mode="HTML"
+            )
+            context.application.bot_data.setdefault("pending_commands", {})[sent_message.message_id] = {
+                "command": command,
+                "user_id": update.message.from_user.id,
+            }
+            return
 
-    response = await ai_service.run(command, text_after_command, update.message.from_user.id)
-    await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-    await db_service.save_command(update.message, response, command) 
+        response = await ai_service.run(command, text_after_command, update.message.from_user.id)
+        await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+        await db_service.save_command(update.message, response, command)
+        logger.debug(f"Successfully processed command '{command}' from user {update.message.from_user.id}")
+    except Exception as e:
+        logger.error(f"Failed to process command '{command}' from user {update.message.from_user.id}: {e}")
+        await update.message.reply_text("Sorry, I encountered an error processing your command. Please try again later.")
+        raise 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan context manager.
+    
+    Manages the complete lifecycle of the TowerBot application:
+    - Startup: Initializes services, connections, and background tasks
+    - Runtime: Maintains application state
+    - Shutdown: Cleanly closes connections and stops services
+    
+    Args:
+        app: FastAPI application instance
+        
+    Yields:
+        None: Control to the application runtime
+    """
     global store, checkpointer
 
     logger.info("Application startup sequence initiated...")
+    
+    try:
+        llm = AzureChatOpenAI(
+            api_version="2024-12-01-preview",
+            azure_deployment=settings.MODEL
+        )
 
-    llm = AzureChatOpenAI(
-        api_version="2024-12-01-preview",
-        azure_deployment=settings.MODEL
-    )
+        pool = AsyncConnectionPool(conninfo=settings.SUPABASE_CONN_STRING)
 
-    pool = AsyncConnectionPool(conninfo=settings.SUPABASE_CONN_STRING)
+        store = AsyncPostgresStore(
+            conn=pool,
+            index={
+                "dims": 1536,
+                "embed": f"azure_openai:{settings.EMBEDDING_MODEL}",
+            },
+        )
 
-    store = AsyncPostgresStore(
-        conn=pool,
-        index={
-            "dims": 1536,
-            "embed": f"azure_openai:{settings.EMBEDDING_MODEL}",
-        },
-    )
+        checkpointer = AsyncPostgresSaver(conn=pool)
 
-    checkpointer = AsyncPostgresSaver(conn=pool)
+        await store.setup()
+        await checkpointer.setup()
 
-    await store.setup()
-    await checkpointer.setup()
+        ai_service = AiService()
+        db_service = DatabaseService()
+        graph_service = GraphService()
 
-    ai_service = AiService()
-    db_service = DatabaseService()
-    graph_service = GraphService()
+        ai_service.connect(llm, store, checkpointer)
+        db_service.connect()
 
-    ai_service.connect(llm, store, checkpointer)
-    db_service.connect()
+        await graph_service.connect()
 
-    await graph_service.connect()
+        tg_app = create_application(ai_service, db_service, graph_service)
 
-    tg_app = create_application(ai_service, db_service, graph_service)
+        await tg_app.initialize()
 
-    await tg_app.initialize()
+        scheduler = start_scheduler(graph_service)
 
-    scheduler = start_scheduler(graph_service)
+        app.state.ai_service = ai_service
+        app.state.db_service = db_service
+        app.state.graph_service = graph_service
+        app.state.tg_app = tg_app
+        app.state.scheduler = scheduler
 
-    app.state.ai_service = ai_service
-    app.state.db_service = db_service
-    app.state.graph_service = graph_service
-    app.state.tg_app = tg_app
-    app.state.scheduler = scheduler
-
-    logger.info("Application startup complete. Bot is initialized and ready.")
+        logger.info("Application startup complete. Bot is initialized and ready.")
+    except Exception as e:
+        logger.error(f"Application startup failed: {e}")
+        raise
 
     try:
         yield
     finally:
         logger.info("Application shutdown sequence initiated...")
-        await graph_service.close()
-        logger.info("Graphiti client closed.")
+        try:
+            await graph_service.close()
+            logger.info("Graphiti client closed.")
+        except Exception as e:
+            logger.error(f"Error closing Graphiti client: {e}")
 
-        if app.state.tg_app:
-            await app.state.tg_app.shutdown()
-            logger.info("Telegram application shut down.")
+        try:
+            if app.state.tg_app:
+                await app.state.tg_app.shutdown()
+                logger.info("Telegram application shut down.")
+        except Exception as e:
+            logger.error(f"Error shutting down Telegram application: {e}")
 
-        if pool:
-            await pool.close()
-            logger.info("Postgres connection pool closed.")
+        try:
+            if pool:
+                await pool.close()
+                logger.info("Postgres connection pool closed.")
+        except Exception as e:
+            logger.error(f"Error closing Postgres connection pool: {e}")
 
-        if app.state.scheduler:
-            app.state.scheduler.shutdown()
-            logger.info("APScheduler shut down.")
+        try:
+            if app.state.scheduler:
+                app.state.scheduler.shutdown()
+                logger.info("APScheduler shut down.")
+        except Exception as e:
+            logger.error(f"Error shutting down APScheduler: {e}")
 
         logger.info("Application shutdown complete.")

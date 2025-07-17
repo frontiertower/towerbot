@@ -1,5 +1,12 @@
+"""Core tools and utilities for TowerBot AI agents.
+
+This module provides tools for external API integrations, graph search functionality,
+and agent utilities used by the QA and Connect agents.
+"""
+
 import json
 import httpx
+import logging
 
 from pathlib import Path
 from datetime import datetime
@@ -29,6 +36,8 @@ from app.core.config import settings
 from app.services.graph import get_graphiti_client
 from app.models.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
 
+logger = logging.getLogger(__name__)
+
 SEARCH_RECIPE_MAP = {
     SearchRecipeEnum.COMBINED_HYBRID_SEARCH_MMR: COMBINED_HYBRID_SEARCH_MMR,
     SearchRecipeEnum.COMBINED_HYBRID_SEARCH_CROSS_ENCODER: COMBINED_HYBRID_SEARCH_CROSS_ENCODER,
@@ -45,6 +54,11 @@ SEARCH_RECIPE_MAP = {
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_RRF: COMMUNITY_HYBRID_SEARCH_RRF,
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_MMR: COMMUNITY_HYBRID_SEARCH_MMR,
 }
+"""Mapping of search recipe enums to their corresponding configuration objects.
+
+This dictionary maps the SearchRecipeEnum values to their actual Graphiti search
+configuration objects for use in graph search operations.
+"""
 
 async def get_jwt_token():
     """
@@ -68,8 +82,10 @@ async def get_jwt_token():
             data = response.json()
             return data.get("access")
     except httpx.HTTPStatusError as e:
+        logger.error(f"BerlinHouse API HTTP error: {e.response.status_code} - {e.response.text}")
         raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
     except httpx.RequestError as e:
+        logger.error(f"BerlinHouse API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
 
 async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI):
@@ -126,8 +142,10 @@ def get_calendar_events_tool(llm: AzureChatOpenAI):
                 events = response.json()
                 return await summarize_calendar_events(events, llm)
         except httpx.HTTPStatusError as e:
+            logger.error(f"Luma API HTTP error: {e.response.status_code} - {e.response.text}")
             raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
         except httpx.RequestError as e:
+            logger.error(f"Luma API request error: {e}")
             raise Exception(f"API Request Error: {e}") from e
     return get_calendar_events
 
@@ -153,8 +171,10 @@ async def get_tower_communities():
             communities = response.json()
             return communities
     except httpx.HTTPStatusError as e:
+        logger.error(f"BerlinHouse communities API HTTP error: {e.response.status_code} - {e.response.text}")
         raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
     except httpx.RequestError as e:
+        logger.error(f"BerlinHouse communities API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
 
 @tool
@@ -172,9 +192,17 @@ def get_tower_info():
     project_root = Path(__file__).resolve().parent.parent.parent
     json_file_path = project_root / "static" / "json" / "tower.json"
 
-    with open(json_file_path, 'r', encoding='utf-8') as f:
-        tower_data = json.load(f)
-    return tower_data
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as f:
+            tower_data = json.load(f)
+        logger.debug(f"Tower data loaded from {json_file_path}")
+        return tower_data
+    except FileNotFoundError:
+        logger.error(f"Tower data file not found: {json_file_path}")
+        raise
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in tower data file: {e}")
+        raise
 
 
 @tool("get_connections", args_schema=SearchInputSchema)
@@ -212,12 +240,25 @@ async def get_connections(
 
 
 def get_qa_agent_tools(llm: AzureChatOpenAI):
+    """Get the list of tools available to the QA agent.
+    
+    Args:
+        llm: Azure OpenAI language model instance
+        
+    Returns:
+        list: List of tools for the QA agent
+    """
     return [
         get_tower_info,
         get_calendar_events_tool(llm),
     ]
 
 def get_connect_agent_tools():
+    """Get the list of tools available to the Connect agent.
+    
+    Returns:
+        list: List of tools for the Connect agent
+    """
     return [
         get_connections,
     ]
