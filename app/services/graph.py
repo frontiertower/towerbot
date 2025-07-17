@@ -1,10 +1,10 @@
 from datetime import timezone
-from telegram import Message
 from openai import AsyncAzureOpenAI
 from graphiti_core import Graphiti
 from graphiti_core.nodes import EpisodeType
+from telegram import Message as TelegramMessage
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
-# from graphiti_core.utils.maintenance.graph_data_operations import clear_data
+from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
 
@@ -82,27 +82,27 @@ class GraphService:
             "SENT": Sent,
             "BELONGS_TO": BelongsTo,
             "IN_REPLY_TO": InReplyTo,
-            "LocatedOn": LocatedOn,
-            "WorksOn": WorksOn,
-            "Attends": Attends,
-            "InterestedIn": InterestedIn,
+            "LOCATED_ON": LocatedOn,
+            "WORKS_ON": WorksOn,
+            "ATTENDS": Attends,
+            "INTERESTED_IN": InterestedIn,
         }
         self.edge_type_map = {
-            ("User", "Event"): ["Attends"],
-            ("User", "Floor"): ["LocatedOn"],
-            ("Event", "Floor"): ["LocatedOn"],
-            ("Project", "Floor"): ["LocatedOn"],
-            ("User", "Interest"): ["InterestedIn"],
-            ("User", "Project"): ["WorksOn"],
-            ("Event", "Interest"): ["InterestedIn"],
-            ("Entity", "Entity"): ["RelatesTo"],
+            ("User", "Event"): ["ATTENDS"],
+            ("User", "Floor"): ["LOCATED_ON"],
+            ("Event", "Floor"): ["LOCATED_ON"],
+            ("Project", "Floor"): ["LOCATED_ON"],
+            ("User", "Interest"): ["INTERESTED_IN"],
+            ("User", "Project"): ["WORKS_ON"],
+            ("Event", "Interest"): ["INTERESTED_IN"],
+            ("Entity", "Entity"): ["RELATES_TO"],
         }
 
     async def connect(self):
         self.graphiti = get_graphiti_client()
-        # if settings.APP_ENV == "dev":
-        #     await clear_data(self.graphiti.driver)
-        #     await self.graphiti.build_indices_and_constraints()
+        if settings.APP_ENV == "dev":
+            await clear_data(self.graphiti.driver)
+            await self.graphiti.build_indices_and_constraints()
 
     async def close(self):
         if self.graphiti:
@@ -112,93 +112,119 @@ class GraphService:
         if settings.APP_ENV == "prod" and self.graphiti:
             await self.graphiti.build_communities()
 
-    async def process_telegram_message(self, message: Message):
+    async def process_telegram_message(self, message: TelegramMessage):
         await self.add_structured_message(message)
         await self.extract_entities_from_message(message)
 
-    async def add_structured_message(self, message: Message):
+    async def add_structured_message(self, message: TelegramMessage):
         if not self.graphiti:
             raise ConnectionError("Graphiti client not connected. Call `connect()` first.")
 
         user_info = message.from_user
+        user_id = user_info.id
         user_node = None
-        try:
-            user_node = await User.get_by_uuid(self.graphiti.driver, uuid=str(user_info.id))
-        except Exception:
-            user_node = None
-        if not user_node:
+
+        cypher = "MATCH (n:User {user_id: $user_id}) RETURN n"
+        result = await self.graphiti.driver.execute_query(cypher, user_id=user_id)
+
+        if result and isinstance(result[0], dict) and 'n' in result[0]:
+            user_node = User(**result[0]['n'])
+        else:
             user_node = User(
-                uuid=str(user_info.id),
-                user_id=user_info.id,
-                username=user_info.username,
-                first_name=user_info.first_name
+                user_id=user_id,
+                username=getattr(user_info, "username", None),
+                first_name=user_info.first_name,
+                last_name=getattr(user_info, "last_name", None)
             )
-            await user_node.save(self.graphiti.driver)
+            cypher = """
+            MERGE (n:User {user_id: $user_id})
+            SET n += $props
+            RETURN n
+            """
+            await self.graphiti.driver.execute_query(
+                cypher,
+                user_id=user_node.user_id,
+                props=user_node.model_dump()
+            )
 
         topic_id = message.message_thread_id
         topic_name = "General"
-        if message.forum_topic_created:
-            topic_name = message.forum_topic_created.name
+
+        if message.reply_to_message.forum_topic_created:
+            topic_name = message.reply_to_message.forum_topic_created.name
         if not topic_id:
             topic_id = message.chat.id
-
+        
         topic_node = None
-        try:
-            topic_node = await Topic.get_by_uuid(self.graphiti.driver, uuid=str(topic_id))
-        except Exception:
-            topic_node = None
-        if not topic_node:
-            topic_node = Topic(uuid=str(topic_id), topic_id=topic_id, title=topic_name)
-            await topic_node.save(self.graphiti.driver)
+        cypher = "MATCH (n:Topic {topic_id: $topic_id}) RETURN n"
+        result = await self.graphiti.driver.execute_query(cypher, topic_id=topic_id)
+
+        if result and isinstance(result[0], dict) and 'n' in result[0]:
+            topic_node = Topic(**result[0]['n'])
+        else:
+            topic_node = Topic(topic_id=topic_id, title=topic_name)
+            cypher = """
+            MERGE (n:Topic {topic_id: $topic_id})
+            SET n += $props
+            RETURN n
+            """
+            await self.graphiti.driver.execute_query(
+                cypher,
+                topic_id=topic_node.topic_id,
+                props=topic_node.model_dump()
+            )
 
         iso_timestamp = message.date.astimezone(timezone.utc).isoformat()
         message_node = Message(
-            uuid=str(message.message_id),
             message_id=message.message_id,
             text=message.text,
             timestamp=iso_timestamp
         )
-        await message_node.save(self.graphiti.driver)
+        cypher = """
+        MERGE (n:Message {message_id: $message_id})
+        SET n += $props
+        RETURN n
+        """
+        await self.graphiti.driver.execute_query(
+            cypher,
+            message_id=message_node.message_id,
+            props=message_node.model_dump()
+        )
 
-        # Add edges using Cypher (MERGE pattern)
-        await self._add_edge("Sent", user_node.uuid, message_node.uuid)
-        await self._add_edge("BelongsTo", message_node.uuid, topic_node.uuid)
+        await self._add_edge("SENT", user_node.user_id, message_node.message_id, "User", "Message")
+        await self._add_edge("BELONGS_TO", message_node.message_id, topic_node.topic_id, "Message", "Topic")
 
         if message.reply_to_message:
             parent_message_id = message.reply_to_message.message_id
-            parent_message_node = None
-            try:
-                parent_message_node = await Message.get_by_uuid(self.graphiti.driver, uuid=str(parent_message_id))
-            except Exception:
-                parent_message_node = None
-            if parent_message_node:
-                await self._add_edge("InReplyTo", message_node.uuid, parent_message_node.uuid)
+            cypher = "MATCH (n:Message {message_id: $message_id}) RETURN n"
+            result = await self.graphiti.driver.execute_query(cypher, message_id=parent_message_id)
 
-    async def _add_edge(self, edge_type: str, from_uuid: str, to_uuid: str):
-        # Generic Cypher for edge creation between nodes by uuid
+            if result and isinstance(result[0], dict) and 'n' in result[0]:
+                await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
+
+    async def _add_edge(self, edge_type: str, from_id: int, to_id: int, from_label: str, to_label: str):
+        from_id_field = "user_id" if from_label == "User" else "message_id" if from_label == "Message" else "topic_id"
+        to_id_field = "user_id" if to_label == "User" else "message_id" if to_label == "Message" else "topic_id"
+        
         cypher = f"""
-        MATCH (a {{uuid: $from_uuid}}), (b {{uuid: $to_uuid}})
+        MATCH (a:{from_label} {{{from_id_field}: $from_id}}), (b:{to_label} {{{to_id_field}: $to_id}})
         MERGE (a)-[r:{edge_type}]->(b)
         RETURN r
         """
         await self.graphiti.driver.execute_query(
             cypher,
-            from_uuid=from_uuid,
-            to_uuid=to_uuid
+            from_id=from_id,
+            to_id=to_id
         )
 
-    async def extract_entities_from_message(self, message: Message):
+    async def extract_entities_from_message(self, message: TelegramMessage):
         if not self.graphiti:
             raise ConnectionError("Graphiti client not connected. Call `connect()` first.")
 
-        conversational_body = self._create_conversational_body(message)
-        if not message.text:
-            return
-
         await self.graphiti.add_episode(
-            name=f"telegram_message_extraction_{message.message_id}",
-            episode_body=conversational_body,
-            source=EpisodeType.message,
+            name=f"telegram_message_{message.message_id}",
+            episode_body=message.to_json(),
+            source=EpisodeType.json,
             source_description="TowerBot",
             reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
@@ -208,33 +234,3 @@ class GraphService:
             edge_type_map=self.edge_type_map,
             update_communities=True,
         )
-
-    def _get_message_description(self, message: Message) -> str:
-        if message.text:
-            return message.text
-        if hasattr(message, 'forum_topic_created') and message.forum_topic_created:
-            return f"[Created Forum Topic: '{message.forum_topic_created.name}']"
-        if hasattr(message, 'photo') and message.photo:
-            return "[Shared a photo]"
-        if hasattr(message, 'sticker') and message.sticker:
-            return "[Sent a sticker]"
-        return "[Message with no text]"
-
-    def _create_conversational_body(self, message: Message) -> str:
-        sender_name = message.from_user.first_name or message.from_user.username or "Unknown"
-        message_text = self._get_message_description(message)
-
-        is_meaningful_reply = (
-            message.reply_to_message and
-            (message.reply_to_message.text or message.reply_to_message.photo)
-        )
-
-        if is_meaningful_reply:
-            original_msg = message.reply_to_message
-            original_sender = original_msg.from_user.first_name or original_msg.from_user.username or "Unknown"
-            original_text = self._get_message_description(original_msg)
-            return (
-                f"{original_sender}: {original_text}\n"
-                f"{sender_name}: {message_text}"
-            )
-        return f"{sender_name}: {message_text}"

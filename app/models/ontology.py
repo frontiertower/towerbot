@@ -1,27 +1,21 @@
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
-# =========================
-# Graphiti Entity Definitions
-# =========================
-
+# Entities
 class User(BaseModel):
-    """
-    @Graphiti Entity: User
-    Represents a unique user in the chat system.
-    """
+    """A member of the Frontier Tower."""
     user_id: int = Field(..., description="Unique integer ID for the user.")
     username: Optional[str] = Field(None, description="The user's username, if available.")
-    first_name: Optional[str] = Field(None, description="The user's first name, if available.")
+    first_name: str = Field(..., description="The user's first name, if available.")
+    last_name: Optional[str] = Field(None, description="The user's last name, if available.")
+    bio: Optional[str] = Field(None, description="A short biography or summary of the user's interests and background.")
+    skills: Optional[List[str]] = Field(default_factory=list, description="A list of the user's skills or areas of expertise.")
 
     class Config:
         label = "User"
 
 class Topic(BaseModel):
-    """
-    @Graphiti Entity: Topic
-    Represents a conversation thread or topic.
-    """
+    """A discussion thread or forum topic."""
     topic_id: int = Field(..., description="Unique integer ID for the topic.")
     title: str = Field(..., description="Title of the topic or thread.")
 
@@ -29,10 +23,7 @@ class Topic(BaseModel):
         label = "Topic"
 
 class Message(BaseModel):
-    """
-    @Graphiti Entity: Message
-    Represents a single message sent in the chat.
-    """
+    """A message sent by a user in a topic."""
     message_id: int = Field(..., description="Unique integer ID for the message.")
     text: Optional[str] = Field(None, description="Text content of the message.")
     timestamp: str = Field(..., description="ISO 8601 timestamp when the message was sent.")
@@ -41,10 +32,7 @@ class Message(BaseModel):
         label = "Message"
 
 class Floor(BaseModel):
-    """
-    @Graphiti Entity: Floor
-    Represents a specific floor within the Frontier Tower.
-    """
+    """A physical or logical floor within the Frontier Tower."""
     level: int = Field(..., description="Numeric floor level, e.g., 1 for first floor.")
     description: Optional[str] = Field(None, description="Description of the floor, e.g., 'Innovation Lab'.")
     facilities: Optional[List[str]] = Field(None, description="List of facilities available on this floor.")
@@ -54,10 +42,7 @@ class Floor(BaseModel):
         label = "Floor"
 
 class Event(BaseModel):
-    """
-    @Graphiti Entity: Event
-    Represents an event, meeting, or activity scheduled within the Frontier Tower.
-    """
+    """A scheduled gathering or activity."""
     title: str = Field(..., description="Title or name of the event.")
     description: Optional[str] = Field(None, description="Detailed description of the event.")
     start_time: Optional[str] = Field(
@@ -77,61 +62,39 @@ class Event(BaseModel):
         label = "Event"
 
 class Interest(BaseModel):
-    """
-    @Graphiti Entity: Interest
-    Represents a topic, field, or area of interest relevant to users or events.
-    """
-    description: Optional[str] = Field(None, description="Brief description of the interest area.")
+    """An area of interest or expertise."""
+    title: str = Field(..., unique=True)
 
     class Config:
         label = "Interest"
 
 class Project(BaseModel):
-    """
-    @Graphiti Entity: Project
-    Represents a specific project being worked on by users or communities.
-    """
+    """A collaborative project or initiative."""
+    title: str = Field(..., unique=True)
     status: Optional[str] = Field("Active", description="The current status, e.g., 'Active', 'Archived'.")
+    description: Optional[str] = Field(None, description="A detailed summary of the project's goals and technology.")
 
     class Config:
         label = "Project"
 
-# =========================
-# Graphiti Edge Definitions
-# =========================
-
+# Edges
 class Sent(BaseModel):
-    """
-    @Graphiti Edge: SENT
-    Relationship: (User)-[:SENT]->(Message)
-    Indicates that a user sent a message.
-    """
+    """Sending relationship between a user and a message."""
     class Config:
         label = "SENT"
 
 class BelongsTo(BaseModel):
-    """
-    @Graphiti Edge: BELONGS_TO
-    Relationship: (Message)-[:BELONGS_TO]->(Topic)
-    Indicates that a message belongs to a topic/thread.
-    """
+    """Membership relationship between a message and a topic."""
     class Config:
         label = "BELONGS_TO"
 
 class InReplyTo(BaseModel):
-    """
-    @Graphiti Edge: IN_REPLY_TO
-    Relationship: (Message)-[:IN_REPLY_TO]->(Message)
-    Indicates that a message is a reply to another message.
-    """
+    """Reply relationship between a message and another message."""
     class Config:
         label = "IN_REPLY_TO"
 
 class LocatedOn(BaseModel):
-    """
-    @Graphiti Edge: LOCATED_ON
-    Indicates that an event, project, or user is located on a specific floor.
-    """
+    """Location relationship between an entity and a floor."""
     since: Optional[str] = Field(
         None,
         description="ISO 8601 timestamp since the entity has been located here."
@@ -142,10 +105,7 @@ class LocatedOn(BaseModel):
         label = "LOCATED_ON"
 
 class WorksOn(BaseModel):
-    """
-    @Graphiti Edge: WORKS_ON
-    Represents a user's involvement in organizing or supporting a project or event.
-    """
+    """Assignment relationship between a user and a project."""
     role: Optional[str] = Field(None, description="Role of the user in the event or project, e.g., 'Speaker', 'Volunteer'.")
     assigned_at: Optional[str] = Field(
         None,
@@ -156,10 +116,7 @@ class WorksOn(BaseModel):
         label = "WORKS_ON"
 
 class Attends(BaseModel):
-    """
-    @Graphiti Edge: ATTENDS
-    Represents a user's attendance at an event.
-    """
+    """Attendance relationship between a user and an event."""
     rsvp_status: Optional[str] = Field(None, description="RSVP status, e.g., 'Attending', 'Interested', 'Declined'.")
     checked_in_at: Optional[str] = Field(
         None,
@@ -170,10 +127,7 @@ class Attends(BaseModel):
         label = "ATTENDS"
 
 class InterestedIn(BaseModel):
-    """
-    @Graphiti Edge: INTERESTED_IN
-    Links a user or event to an area of interest.
-    """
+    """Interest relationship between a user and an area of interest or event."""
     expressed_at: Optional[str] = Field(
         None,
         description="ISO 8601 timestamp when the interest was expressed."
