@@ -34,7 +34,7 @@ from graphiti_core.search.search_config_recipes import (
 )
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
-from app.models.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
+from app.schemas.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
 
 logger = logging.getLogger(__name__)
 
