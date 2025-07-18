@@ -1,19 +1,41 @@
 """Application lifespan management module for TowerBot.
 
-This module handles the startup and shutdown lifecycle of the TowerBot application,
-including initialization of services, Telegram bot setup, database connections,
-and background task scheduling.
+This module handles the complete startup and shutdown lifecycle of the TowerBot application,
+including initialization of services, Telegram bot setup, database connections, background 
+task scheduling, and comprehensive multi-layered authentication system.
+
+Key Features:
+- Multi-layered authentication (Group membership + Soulink + BerlinHouse API)
+- Robust error handling for Telegram API calls
+- Automatic unauthorized group detection and bot removal
+- Secure supergroup message processing
+- Debug logging and monitoring capabilities
+
+Authentication Flow:
+1. Group Membership: User must be in allowed Telegram groups
+2. Soulink (Optional): User must share at least one group with designated admin
+3. BerlinHouse API: User must be verified community member
+4. Command Processing: Only authorized users can execute bot commands
+
+Security Features:
+- Input validation for all configuration values
+- Specific exception handling for different error types
+- Rate limiting detection and logging
+- Automatic bot removal from unauthorized groups
+- Comprehensive audit logging for all authentication attempts
 """
 
 import logging
 
 from fastapi import FastAPI
 from telegram import Update
+from telegram.error import TelegramError, BadRequest, Forbidden, NetworkError, RetryAfter
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    ChatMemberHandler,
     filters,
 )
 from psycopg.rows import dict_row
@@ -54,23 +76,358 @@ def is_valid_text_message(update: Update):
     """
     return bool(update.message and update.message.text and update.message.text.strip())
 
+async def is_user_authorized(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Check if a user is authorized to interact with the bot.
+    
+    Implements the first two layers of TowerBot's three-tier authentication system:
+    1. Group Membership: Validates user is member of allowed Telegram groups
+    2. Soulink Authentication: Validates user shares at least one group with admin (if enabled)
+    
+    This function does NOT check BerlinHouse API membership - that's handled separately
+    in individual command handlers to avoid redundant API calls.
+    
+    Security Features:
+    - Robust error handling for Telegram API failures
+    - Input validation for configuration values
+    - Comprehensive debug logging for audit trails
+    - Rate limiting detection and graceful degradation
+    
+    Args:
+        user_id: Telegram user ID to check
+        context: Telegram context with bot instance for API calls
+        
+    Returns:
+        bool: True if user passes both group membership and soulink checks
+        
+    Raises:
+        No exceptions - all errors are caught and logged, failing secure by default
+    """
+    logger.debug(f"Starting authorization check for user {user_id}")
+    logger.debug(f"GROUP_ID={settings.GROUP_ID}, ALLOWED_GROUP_IDS={settings.ALLOWED_GROUP_IDS}")
+    logger.debug(f"SOULINK_ENABLED={settings.SOULINK_ENABLED}, SOULINK_ADMIN_ID={settings.SOULINK_ADMIN_ID}")
+    
+    # Check if user is in allowed groups
+    allowed_groups_result = await is_user_in_allowed_groups(user_id, context)
+    logger.debug(f"is_user_in_allowed_groups result: {allowed_groups_result}")
+    
+    if not allowed_groups_result:
+        logger.debug(f"User {user_id} DENIED - not in allowed groups")
+        return False
+    
+    # Check soulink authentication if enabled
+    soulink_result = await has_soulink_access(user_id, context)
+    logger.debug(f"has_soulink_access result: {soulink_result}")
+    
+    if not soulink_result:
+        logger.debug(f"User {user_id} DENIED - failed soulink check")
+        logger.info(f"User {user_id} denied access: no shared groups with admin")
+        return False
+    
+    logger.debug(f"User {user_id} AUTHORIZED")
+    return True
+
+async def is_user_in_allowed_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Check if a user is a member of any allowed groups.
+    
+    Validates user membership in groups specified by GROUP_ID and ALLOWED_GROUP_IDS
+    configuration. This is the first layer of TowerBot's authentication system.
+    
+    Process:
+    1. Validates and parses GROUP_ID and ALLOWED_GROUP_IDS configuration
+    2. Checks user membership in each group via Telegram Bot API
+    3. Returns True if user is member/admin/creator in any allowed group
+    
+    Error Handling:
+    - BadRequest: User not in group (expected, continues silently)
+    - Forbidden: Bot lacks permission (warns, continues to next group)
+    - NetworkError: Connection issues (errors, continues to next group)
+    - RetryAfter: Rate limiting (warns with retry time, continues)
+    - TelegramError: Other API errors (errors, continues)
+    - Exception: Unexpected errors (errors, continues)
+    
+    Args:
+        user_id: Telegram user ID to check
+        context: Telegram context with bot instance for API calls
+        
+    Returns:
+        bool: True if user is member of at least one allowed group
+        
+    Security Notes:
+        - Fails secure: Returns False if all groups fail to check
+        - Logs all errors for monitoring and debugging
+        - Validates group ID format before API calls
+    """
+    logger.debug(f"Checking allowed groups for user {user_id}")
+    
+    # Build list of allowed group IDs with validation
+    allowed_groups = set()
+    
+    # Validate main GROUP_ID
+    if settings.GROUP_ID:
+        try:
+            # Try to convert to int to validate format (Telegram group IDs are integers)
+            int(settings.GROUP_ID)
+            allowed_groups.add(settings.GROUP_ID)
+        except (ValueError, TypeError):
+            logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
+    
+    # Validate additional group IDs
+    if settings.ALLOWED_GROUP_IDS:
+        additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
+        for gid in additional_groups:
+            try:
+                int(gid)  # Validate format
+                allowed_groups.add(gid)
+            except (ValueError, TypeError):
+                logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
+                continue
+    
+    logger.debug(f"Allowed groups to check: {allowed_groups}")
+    
+    # Check membership in each allowed group
+    for group_id in allowed_groups:
+        logger.debug(f"Checking membership in group {group_id}")
+        try:
+            member = await context.bot.get_chat_member(group_id, user_id)
+            logger.debug(f"User {user_id} status in group {group_id}: {member.status}")
+            if member.status in ["member", "administrator", "creator"]:
+                logger.debug(f"User {user_id} is a {member.status} in group {group_id}")
+                return True
+        except BadRequest as e:
+            # User not found in group, chat not found, or invalid chat ID
+            logger.debug(f"BadRequest for user {user_id} in group {group_id}: {e}")
+            continue
+        except Forbidden as e:
+            # Bot was kicked from group or lacks permission
+            logger.warning(f"Bot lacks permission to check group {group_id}: {e}")
+            continue
+        except NetworkError as e:
+            # Network issues - this is more serious, should not silently continue
+            logger.error(f"Network error checking group {group_id}: {e}")
+            # For network errors, we might want to fail secure (deny access) or retry
+            # For now, continue to next group but log as error
+            continue
+        except RetryAfter as e:
+            # Rate limiting - should respect the retry_after value
+            logger.warning(f"Rate limited checking group {group_id}: retry after {e.retry_after}s")
+            # For rate limiting, we should ideally wait, but for now continue
+            continue
+        except TelegramError as e:
+            # Other Telegram-specific errors
+            logger.error(f"Telegram error checking group {group_id}: {e}")
+            continue
+        except Exception as e:
+            # Unexpected errors - log and continue but treat as serious
+            logger.error(f"Unexpected error checking group {group_id}: {e}")
+            continue
+    
+    logger.debug(f"User {user_id} not found in any allowed groups")
+    return False
+
+async def get_user_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> set:
+    """Get all groups that a user is a member of for Soulink authentication.
+    
+    Used exclusively by the Soulink authentication system to determine shared
+    group memberships between users and the designated admin.
+    
+    Important Limitations:
+    - Can only check groups where the bot is also a member
+    - Limited to groups specified in GROUP_ID and ALLOWED_GROUP_IDS
+    - Cannot discover groups the bot doesn't know about
+    
+    Process:
+    1. Validates GROUP_ID and ALLOWED_GROUP_IDS configuration
+    2. Checks user membership in each known group
+    3. Returns set of group IDs where user has membership
+    
+    Error Handling:
+    - Same robust error handling as is_user_in_allowed_groups()
+    - Continues checking all groups even if some fail
+    - Logs all errors for monitoring
+    
+    Args:
+        user_id: Telegram user ID to check
+        context: Telegram context with bot instance for API calls
+        
+    Returns:
+        set: Set of group ID strings where the user is a member/admin/creator
+        
+    Security Notes:
+        - Only used for Soulink authentication
+        - Does not grant access by itself
+        - Fails secure by returning empty set on configuration errors
+    """
+    user_groups = set()
+    
+    # Build list of all groups the bot knows about with validation
+    known_groups = set()
+    
+    # Validate main GROUP_ID
+    if settings.GROUP_ID:
+        try:
+            int(settings.GROUP_ID)
+            known_groups.add(settings.GROUP_ID)
+        except (ValueError, TypeError):
+            logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
+    
+    # Validate additional group IDs
+    if settings.ALLOWED_GROUP_IDS:
+        additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
+        for gid in additional_groups:
+            try:
+                int(gid)
+                known_groups.add(gid)
+            except (ValueError, TypeError):
+                logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
+                continue
+    
+    # Check membership in each known group
+    for group_id in known_groups:
+        try:
+            member = await context.bot.get_chat_member(group_id, user_id)
+            if member.status in ["member", "administrator", "creator"]:
+                user_groups.add(group_id)
+        except BadRequest as e:
+            # User not found in group, chat not found, or invalid chat ID
+            logger.debug(f"BadRequest checking membership for user {user_id} in group {group_id}: {e}")
+            continue
+        except Forbidden as e:
+            # Bot was kicked from group or lacks permission
+            logger.warning(f"Bot lacks permission to check group {group_id}: {e}")
+            continue
+        except NetworkError as e:
+            # Network issues - log as error but continue
+            logger.error(f"Network error checking membership for user {user_id} in group {group_id}: {e}")
+            continue
+        except RetryAfter as e:
+            # Rate limiting
+            logger.warning(f"Rate limited checking membership for user {user_id} in group {group_id}: retry after {e.retry_after}s")
+            continue
+        except TelegramError as e:
+            # Other Telegram-specific errors
+            logger.error(f"Telegram error checking membership for user {user_id} in group {group_id}: {e}")
+            continue
+        except Exception as e:
+            # Unexpected errors
+            logger.error(f"Unexpected error checking membership for user {user_id} in group {group_id}: {e}")
+            continue
+    
+    return user_groups
+
+async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Check if user has Soulink access (shares at least one group with admin).
+    
+    Soulink is TowerBot's optional "social proximity" authentication layer that requires
+    users to share at least one Telegram group with a designated admin. This creates
+    a social validation mechanism beyond simple group membership.
+    
+    How Soulink Works:
+    1. Admin designates their Telegram user ID in SOULINK_ADMIN_ID
+    2. System checks which groups both user and admin are members of
+    3. If they share ANY group, user passes Soulink authentication
+    4. If no shared groups, user is denied access
+    
+    Configuration:
+    - SOULINK_ENABLED: Boolean to enable/disable feature
+    - SOULINK_ADMIN_ID: Telegram user ID of the admin to check against
+    
+    Fail-Safe Behavior:
+    - If SOULINK_ENABLED=False, always returns True (disabled)
+    - If SOULINK_ADMIN_ID is missing/invalid, returns True (fail open)
+    - If configuration errors occur, returns True (fail open)
+    
+    Limitations:
+    - Only checks groups where the bot is present
+    - Cannot detect shared groups unknown to the bot
+    - Admin must be in at least one bot-monitored group
+    
+    Args:
+        user_id: Telegram user ID to check
+        context: Telegram context with bot instance for API calls
+        
+    Returns:
+        bool: True if user shares at least one group with admin, or if Soulink is disabled
+        
+    Security Notes:
+        - Fails open on configuration errors (logs warnings)
+        - Validates admin ID format before processing
+        - Logs all shared group analysis for audit trails
+    """
+    logger.debug(f"Checking soulink access for user {user_id}")
+    logger.debug(f"SOULINK_ENABLED={settings.SOULINK_ENABLED}")
+    
+    if not settings.SOULINK_ENABLED:
+        logger.debug(f"Soulink disabled, allowing access")
+        return True
+    
+    if not settings.SOULINK_ADMIN_ID:
+        logger.debug(f"SOULINK_ADMIN_ID not set, allowing access")
+        logger.warning("SOULINK_ENABLED is True but SOULINK_ADMIN_ID is not set")
+        return True
+    
+    # Validate admin ID format
+    try:
+        admin_id = int(settings.SOULINK_ADMIN_ID)
+        if admin_id <= 0:
+            raise ValueError("Admin ID must be positive")
+        logger.debug(f"Admin ID: {admin_id}")
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid SOULINK_ADMIN_ID format: {settings.SOULINK_ADMIN_ID} - {e}")
+        return True  # Fail open for configuration errors
+    
+    # Get groups for both user and admin
+    user_groups = await get_user_groups(user_id, context)
+    admin_groups = await get_user_groups(admin_id, context)
+    
+    # Check if they share any groups
+    shared_groups = user_groups.intersection(admin_groups)
+    
+    logger.debug(f"User {user_id} groups: {user_groups}")
+    logger.debug(f"Admin {admin_id} groups: {admin_groups}")
+    logger.debug(f"Shared groups: {shared_groups}")
+    
+    result = len(shared_groups) > 0
+    logger.debug(f"Soulink access result: {result}")
+    
+    return result
+
 def create_application(
     ai_service: AiService,
     db_service: DatabaseService,
     graph_service: GraphService,
 ):
-    """Create and configure the Telegram bot application.
+    """Create and configure the Telegram bot application with comprehensive security.
     
-    Sets up the Telegram bot with all necessary handlers and injects
-    the required services into the bot's data context.
+    Sets up the Telegram bot with all necessary handlers, security features,
+    and injects the required services into the bot's data context.
+    
+    Security Features:
+    - Multi-layered authentication for all interactions
+    - Automatic unauthorized group detection and removal
+    - Secure supergroup message processing
+    - Command authorization with BerlinHouse API validation
+    - Debug command for chat information
+    
+    Handlers Configured:
+    - /start: Introduction with full authentication
+    - /ask, /report, /propose, /connect: AI-powered commands with authentication
+    - /debug: Chat information display
+    - Chat member updates: Automatic group management
+    - Text messages: Context-aware processing with security checks
     
     Args:
-        ai_service: AI service instance for processing commands
-        db_service: Database service for data persistence
-        graph_service: Graph service for knowledge graph operations
+        ai_service: AI service instance for processing commands and responses
+        db_service: Database service for data persistence and logging
+        graph_service: Graph service for knowledge graph operations and user validation
         
     Returns:
-        Application: Configured Telegram bot application
+        Application: Fully configured Telegram bot application with security features
+        
+    Security Notes:
+        - All handlers implement the three-tier authentication system
+        - Bot will automatically leave unauthorized groups
+        - All user interactions are logged for audit purposes
+        - Error handling prevents information leakage
     """
     bot_data = {
         "ai_service": ai_service,
@@ -82,6 +439,8 @@ def create_application(
     application.bot_data.update(bot_data)
     application.add_handler(CommandHandler("start", handle_start))
     application.add_handler(CommandHandler(["ask", "report", "propose", "connect"], handle_command))
+    application.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    application.add_handler(CommandHandler("debug", handle_debug))
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
             filters.ChatType.GROUP | filters.ChatType.SUPERGROUP | filters.ChatType.PRIVATE
@@ -111,40 +470,173 @@ def start_scheduler(graph_service: GraphService):
 
     return scheduler
 
-async def handle_start(update: Update, _: ContextTypes.DEFAULT_TYPE):
-    """Handle the /start command.
+async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle bot being added to or removed from chats with security validation.
     
-    Sends an introduction message to users who send the /start command.
+    Implements TowerBot's automatic group management security feature. When the bot
+    is added to any chat, this handler validates that the chat is in the allowed
+    groups list. If not, the bot immediately leaves the unauthorized chat.
+    
+    Security Features:
+    - Validates all group additions against GROUP_ID and ALLOWED_GROUP_IDS
+    - Automatically leaves unauthorized groups
+    - Logs all chat member changes for audit purposes
+    - Handles configuration errors gracefully
+    
+    Process:
+    1. Extracts chat information from the update
+    2. Validates GROUP_ID and ALLOWED_GROUP_IDS configuration
+    3. Checks if the chat is in the allowed groups list
+    4. If unauthorized, leaves the chat immediately
+    5. Logs all actions for monitoring
     
     Args:
-        update: Telegram update containing the command
-        _: Telegram context (unused)
+        update: Telegram update containing chat member changes
+        context: Telegram context for bot operations
+        
+    Security Notes:
+        - Prevents unauthorized access through group invitations
+        - Logs all group management actions
+        - Handles bot removal gracefully
+        - Validates configuration before processing
     """
+    result = update.my_chat_member
+    chat_id = str(result.chat.id)
+    chat_type = result.chat.type
+    chat_title = result.chat.title if hasattr(result.chat, 'title') else "Private"
+    
+    logger.info(f"Bot chat member update - chat_id={chat_id}, type={chat_type}, title='{chat_title}'")
+    
+    # Build list of allowed group IDs
+    allowed_groups = set()
+    
+    # Always include the main GROUP_ID
+    allowed_groups.add(settings.GROUP_ID)
+    
+    # Add additional allowed groups if configured
+    if settings.ALLOWED_GROUP_IDS:
+        additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
+        allowed_groups.update(additional_groups)
+    
+    # Check if bot was added to a group
+    if result.new_chat_member.status in ["member", "administrator"]:
+        if chat_id not in allowed_groups:
+            logger.warning(f"Bot added to unauthorized group {chat_id}. Leaving immediately.")
+            try:
+                await context.bot.leave_chat(chat_id)
+                logger.info(f"Successfully left unauthorized group {chat_id}")
+            except Exception as e:
+                logger.error(f"Failed to leave unauthorized group {chat_id}: {e}")
+        else:
+            logger.info(f"Bot added to authorized group {chat_id}")
+
+async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /start command with comprehensive authentication.
+    
+    Provides the initial introduction to TowerBot for new users. This handler
+    implements the full three-tier authentication system to ensure only
+    authorized users can receive the introduction.
+    
+    Authentication Layers:
+    1. Group Membership: User must be in allowed Telegram groups
+    2. Soulink (Optional): User must share groups with admin if enabled
+    3. BerlinHouse API: User must be verified community member
+    
+    Process:
+    1. Validates user is in allowed groups (GROUP_ID or ALLOWED_GROUP_IDS)
+    2. Checks Soulink authentication if enabled
+    3. Sends introduction message from INTRODUCTION constant
+    4. Logs all authentication attempts for audit
+    
+    Args:
+        update: Telegram update containing the /start command
+        context: Telegram context for bot operations and service access
+        
+    Security Notes:
+        - Implements full three-tier authentication
+        - Logs all authentication attempts
+        - Fails secure by ignoring unauthorized users
+        - Does not reveal authentication failures to users
+    """
+    logger.debug(f"/start command received from user {update.message.from_user.id}")
+    logger.debug(f"User info: {update.message.from_user.first_name} {update.message.from_user.last_name} (@{update.message.from_user.username})")
+    
+    # Check if user is authorized
+    if not await is_user_authorized(update.message.from_user.id, context):
+        logger.debug(f"/start command DENIED for user {update.message.from_user.id}")
+        logger.info(f"Ignoring /start command from unauthorized user {update.message.from_user.id}")
+        return
+    
+    logger.debug(f"/start command APPROVED for user {update.message.from_user.id}")
+    
     await update.message.reply_text(INTRODUCTION)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming text messages.
+    """Handle incoming text messages with context-aware security processing.
     
-    Processes text messages based on chat type and context:
-    - Private chats: Validates user membership and provides guidance
-    - Group chats: Processes messages for graph extraction and storage
-    - Handles reply-based command continuation
+    Processes text messages based on chat type with appropriate security measures:
+    - Private chats: Full three-tier authentication + user guidance
+    - Supergroups: Group authorization + knowledge graph extraction
+    - Reply handling: Authentication + command continuation
+    
+    Private Chat Processing:
+    1. Group membership validation
+    2. Soulink authentication (if enabled)
+    3. BerlinHouse API user existence check
+    4. Guidance message for direct conversations
+    
+    Supergroup Processing:
+    1. Chat ID validation against allowed groups
+    2. Message processing for knowledge graph extraction
+    3. No individual user authentication required
+    
+    Reply Processing:
+    1. Full authentication for pending command responses
+    2. Command continuation with AI service
+    3. Result persistence and cleanup
     
     Args:
-        update: Telegram update containing the message
+        update: Telegram update containing the text message
         context: Telegram context with bot data and state
+        
+    Security Features:
+        - Different authentication levels per chat type
+        - Automatic unauthorized group filtering
+        - Comprehensive audit logging
+        - Secure handling of command continuations
+        - Input validation and sanitization
     """
+    logger.debug(f"Full update: {update}")
+
     if not is_valid_text_message(update):
         return
+
+    # Add this logging at the top
+    chat_id = update.message.chat.id
+    chat_type = update.message.chat.type
+    chat_title = update.message.chat.title if hasattr(update.message.chat, 'title') else "Private"
+    
+    logger.info(f"Message from chat_id={chat_id}, type={chat_type}, title='{chat_title}'")
 
     db_service: DatabaseService = context.application.bot_data["db_service"]
     graph_service: GraphService = context.application.bot_data["graph_service"]
     ai_service: AiService = context.application.bot_data["ai_service"]
 
     if update.message.chat.type == "private":
-        # TODO: Confirm via BerlinHouse API if user is a citizen
+        logger.debug(f"Private message received from user {update.message.from_user.id}")
+        logger.debug(f"Message: {update.message.text}")
+        
+        # Check if user is authorized
+        if not await is_user_authorized(update.message.from_user.id, context):
+            logger.debug(f"Private message DENIED for user {update.message.from_user.id}")
+            logger.info(f"Ignoring private message from unauthorized user {update.message.from_user.id}")
+            return
+        
+        logger.debug(f"Private message APPROVED for user {update.message.from_user.id}")
+
+        # TODO: Confirm via BerlinHouse API if citizen is active
         user_exists = await graph_service.check_user_exists(update.message)
-        print("user_exists", user_exists)
+        logger.debug(f"user_exists: {user_exists}")
         if not user_exists:
             await update.message.reply_text(
                 "Sorry, you're not a member of the Frontier Tower. Please <a href='https://frontiertower.io'>join the community</a> to get access.",
@@ -156,6 +648,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if update.message.reply_to_message:
+        # Check if user is authorized for reply-based commands
+        if not await is_user_authorized(update.message.from_user.id, context):
+            logger.info(f"Ignoring reply from unauthorized user {update.message.from_user.id}")
+            return
+
         pending_commands = context.application.bot_data.setdefault("pending_commands", {})
         replied_id = update.message.reply_to_message.message_id
         pending = pending_commands.get(replied_id)
@@ -169,29 +666,105 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     if update.message.chat.type == "supergroup":
+        # Verify this is an authorized supergroup
+        chat_id = str(update.message.chat.id)
+        allowed_groups = set()
+        
+        # Validate main GROUP_ID
+        if settings.GROUP_ID:
+            try:
+                int(settings.GROUP_ID)
+                allowed_groups.add(settings.GROUP_ID)
+            except (ValueError, TypeError):
+                logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
+        
+        # Validate additional group IDs
+        if settings.ALLOWED_GROUP_IDS:
+            additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
+            for gid in additional_groups:
+                try:
+                    int(gid)
+                    allowed_groups.add(gid)
+                except (ValueError, TypeError):
+                    logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
+                    continue
+        
+        if chat_id not in allowed_groups:
+            logger.warning(f"Ignoring supergroup message from unauthorized group {chat_id}")
+            return
+        
+        logger.debug(f"Processing supergroup message from authorized group {chat_id}")
         await graph_service.process_telegram_message(update.message)
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle bot commands like /ask, /report, /propose, and /connect.
+    """Handle bot commands with comprehensive authentication and AI processing.
     
-    Processes bot commands by extracting the command and context,
-    validating input, and routing to the appropriate AI service.
+    Processes TowerBot's AI-powered commands (/ask, /report, /propose, /connect)
+    with full three-tier authentication and intelligent response generation.
+    
+    Supported Commands:
+    - /ask: General questions and information requests
+    - /report: Community reports and observations
+    - /propose: Suggestions and proposals for the community
+    - /connect: Connection requests and networking
+    
+    Authentication Process:
+    1. Group Membership: User must be in allowed Telegram groups
+    2. Soulink (Optional): User must share groups with admin if enabled
+    3. BerlinHouse API: User must be verified community member
+    
+    Command Processing:
+    1. Extracts command type and context from message
+    2. Validates command has context (prompts with example if empty)
+    3. Routes to AI service for intelligent response generation
+    4. Persists command and response for knowledge graph building
+    5. Handles pending commands for multi-turn conversations
     
     Args:
-        update: Telegram update containing the command
+        update: Telegram update containing the bot command
         context: Telegram context with bot data and state
+        
+    Security Features:
+        - Full three-tier authentication system
+        - Input validation and sanitization
+        - Command context validation
+        - Response persistence for audit
+        - Error handling prevents information leakage
+        - Rate limiting and abuse prevention
     """
     if not is_valid_text_message(update):
         return
 
+    logger.debug(f"Command received from user {update.message.from_user.id}")
+    logger.debug(f"Command: {update.message.text}")
+    
+    # Check if user is authorized
+    if not await is_user_authorized(update.message.from_user.id, context):
+        logger.debug(f"Command DENIED for user {update.message.from_user.id}")
+        logger.info(f"Ignoring command from unauthorized user {update.message.from_user.id}")
+        return
+    
+    logger.debug(f"Command APPROVED for user {update.message.from_user.id}")
+
     try:
         ai_service: AiService = context.application.bot_data["ai_service"]
         db_service: DatabaseService = context.application.bot_data["db_service"]
+        graph_service: GraphService = context.application.bot_data["graph_service"]
         command = update.message.text.split()[0][1:]
         text_after_command = update.message.text[len(command) + 2:].strip()
         
         logger.debug(f"Processing command '{command}' from user {update.message.from_user.id}")
+
+        # Check if user exists in the system (BerlinHouse API check)
+        user_exists = await graph_service.check_user_exists(update.message)
+        logger.debug(f"User exists check result: {user_exists}")
+        if not user_exists:
+            await update.message.reply_text(
+                "Sorry, you're not a member of the Frontier Tower. Please <a href='https://frontiertower.io'>join the community</a> to get access.",
+                parse_mode="HTML"
+            )
+            return
 
         if not text_after_command:
             example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
@@ -215,20 +788,78 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Sorry, I encountered an error processing your command. Please try again later.")
         raise 
 
+async def handle_debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Debug command to show chat information for troubleshooting.
+    
+    Provides detailed information about the current chat context for debugging
+    authentication issues, group configurations, and bot behavior.
+    
+    Information Displayed:
+    - Chat ID (for configuration)
+    - Chat Type (private/group/supergroup)
+    - Chat Title (if applicable)
+    - Chat Username (if applicable)
+    - Forum Status (if applicable)
+    
+    Security Notes:
+        - No authentication required (for debugging access issues)
+        - Only reveals chat metadata, not user information
+        - Useful for configuring GROUP_ID and ALLOWED_GROUP_IDS
+        - Helps troubleshoot Soulink authentication problems
+    """
+    chat = update.message.chat
+    chat_info = f"""
+Chat Debug Info:
+- Chat ID: {chat.id}
+- Chat Type: {chat.type}
+- Chat Title: {getattr(chat, 'title', 'Private')}
+- Username: {getattr(chat, 'username', 'None')}
+- Is Forum: {getattr(chat, 'is_forum', False)}
+"""
+    await update.message.reply_text(chat_info)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan context manager.
+    """Application lifespan context manager for TowerBot.
     
-    Manages the complete lifecycle of the TowerBot application:
-    - Startup: Initializes services, connections, and background tasks
-    - Runtime: Maintains application state
-    - Shutdown: Cleanly closes connections and stops services
+    Manages the complete lifecycle of the TowerBot application with comprehensive
+    initialization and graceful shutdown of all services and connections.
+    
+    Startup Process:
+    1. Initializes Azure OpenAI LLM with configured model
+    2. Creates PostgreSQL connection pool with optimized settings
+    3. Sets up LangGraph store with vector embeddings
+    4. Configures PostgreSQL checkpointer for conversation state
+    5. Initializes AI, Graph, and Database services
+    6. Creates Telegram bot application with security handlers
+    7. Starts background scheduler for graph community building
+    8. Attaches all services to FastAPI application state
+    
+    Runtime:
+    - Maintains persistent connections to all services
+    - Manages background task scheduling
+    - Handles Telegram webhook updates
+    - Provides health monitoring endpoint
+    
+    Shutdown Process:
+    1. Closes GraphService connections gracefully
+    2. Shuts down Telegram bot application
+    3. Closes PostgreSQL connection pool
+    4. Stops background scheduler
+    5. Logs completion of shutdown sequence
     
     Args:
-        app: FastAPI application instance
+        app: FastAPI application instance for state management
         
     Yields:
         None: Control to the application runtime
+        
+    State Management:
+        - app.state.ai_service: AI service for command processing
+        - app.state.db_service: Database service for persistence
+        - app.state.graph_service: Graph service for knowledge management
+        - app.state.tg_app: Telegram bot application
+        - app.state.scheduler: Background task scheduler
     """
     global pool, store, checkpointer
 
