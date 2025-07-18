@@ -22,20 +22,23 @@ All agents share common memory and checkpointing capabilities for conversation c
 import uuid
 import logging
 from datetime import datetime
+from pydantic import BaseModel
 from typing import Dict, Any, List, Optional, Type
 
+from langsmith import Client
 from langchain_openai import AzureChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.store.postgres.base import BasePostgresStore
 from langgraph.checkpoint.postgres.base import BasePostgresSaver
 from langmem import create_manage_memory_tool, create_search_memory_tool
-from pydantic import BaseModel
 
 from app.core.constants import SYSTEM_PROMPT
 from app.schemas.responses import QuestionResponse, ConnectionResponse
 from app.core.tools import get_qa_agent_tools, get_connect_agent_tools
 
 logger = logging.getLogger(__name__)
+
+client = Client()
 
 class AgentConfig:
     """Configuration class for AI agent creation.

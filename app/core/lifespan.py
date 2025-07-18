@@ -86,6 +86,36 @@ from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 
 logger = logging.getLogger(__name__)
 
+def safe_user_log(user_id: int) -> str:
+    """Generate privacy-safe user identifier for logging.
+    
+    In development: Returns full user ID for debugging
+    In production: Returns truncated hash for privacy
+    """
+    if settings.APP_ENV == "dev":
+        return str(user_id)
+    return f"user_{str(user_id)[:4]}***"
+
+def safe_message_log(message_text: str) -> str:
+    """Generate privacy-safe message content for logging.
+    
+    In development: Returns full message for debugging
+    In production: Returns truncated/sanitized version
+    """
+    if settings.APP_ENV == "dev":
+        return message_text
+    return f"[{len(message_text)} chars]"
+
+def safe_update_log(update: Update) -> str:
+    """Generate privacy-safe update summary for logging.
+    
+    In development: Returns full update object
+    In production: Returns sanitized summary
+    """
+    if settings.APP_ENV == "dev":
+        return str(update)
+    return f"Update(id={update.update_id}, type={update.effective_chat.type if update.effective_chat else 'unknown'})"
+
 pool: AsyncConnectionPool | None = None
 store: AsyncPostgresStore | None = None
 checkpointer: AsyncPostgresSaver | None = None
@@ -197,8 +227,8 @@ async def is_user_in_allowed_groups(user_id: int, context: ContextTypes.DEFAULT_
     if settings.GROUP_ID:
         try:
             # Try to convert to int to validate format (Telegram group IDs are integers)
-            int(settings.GROUP_ID)
-            allowed_groups.add(settings.GROUP_ID)
+            validated_group_id = int(settings.GROUP_ID)
+            allowed_groups.add(str(validated_group_id))
         except (ValueError, TypeError):
             logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
     
@@ -207,8 +237,8 @@ async def is_user_in_allowed_groups(user_id: int, context: ContextTypes.DEFAULT_
         additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
         for gid in additional_groups:
             try:
-                int(gid)  # Validate format
-                allowed_groups.add(gid)
+                validated_gid = int(gid)  # Validate format
+                allowed_groups.add(str(validated_gid))
             except (ValueError, TypeError):
                 logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
                 continue
@@ -296,8 +326,8 @@ async def get_user_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> s
     # Validate main GROUP_ID
     if settings.GROUP_ID:
         try:
-            int(settings.GROUP_ID)
-            known_groups.add(settings.GROUP_ID)
+            validated_group_id = int(settings.GROUP_ID)
+            known_groups.add(str(validated_group_id))
         except (ValueError, TypeError):
             logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
     
@@ -306,8 +336,8 @@ async def get_user_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> s
         additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
         for gid in additional_groups:
             try:
-                int(gid)
-                known_groups.add(gid)
+                validated_gid = int(gid)
+                known_groups.add(str(validated_gid))
             except (ValueError, TypeError):
                 logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
                 continue
@@ -392,9 +422,8 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
         return True
     
     if not settings.SOULINK_ADMIN_ID:
-        logger.debug(f"SOULINK_ADMIN_ID not set, allowing access")
-        logger.warning("SOULINK_ENABLED is True but SOULINK_ADMIN_ID is not set")
-        return True
+        logger.error("SOULINK_ENABLED is True but SOULINK_ADMIN_ID is not set - failing secure")
+        return False
     
     # Validate admin ID format
     try:
@@ -403,8 +432,8 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
             raise ValueError("Admin ID must be positive")
         logger.debug(f"Admin ID: {admin_id}")
     except (ValueError, TypeError) as e:
-        logger.error(f"Invalid SOULINK_ADMIN_ID format: {settings.SOULINK_ADMIN_ID} - {e}")
-        return True  # Fail open for configuration errors
+        logger.error(f"Invalid SOULINK_ADMIN_ID format: {settings.SOULINK_ADMIN_ID} - {e} - failing secure")
+        return False
     
     # Get groups for both user and admin
     user_groups = await get_user_groups(user_id, context)
@@ -473,7 +502,6 @@ def create_application(
     application.add_handler(CommandHandler("start", handle_start))
     application.add_handler(CommandHandler(["ask", "report", "propose", "connect"], handle_command))
     application.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
-    application.add_handler(CommandHandler("debug", handle_debug))
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
             filters.ChatType.GROUP | filters.ChatType.SUPERGROUP | filters.ChatType.PRIVATE
@@ -591,16 +619,17 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         - Fails secure by ignoring unauthorized users
         - Does not reveal authentication failures to users
     """
-    logger.debug(f"/start command received from user {update.message.from_user.id}")
-    logger.debug(f"User info: {update.message.from_user.first_name} {update.message.from_user.last_name} (@{update.message.from_user.username})")
+    logger.debug(f"/start command received from user {safe_user_log(update.message.from_user.id)}")
+    if settings.APP_ENV == "dev":
+        logger.debug(f"User info: {update.message.from_user.first_name} {update.message.from_user.last_name} (@{update.message.from_user.username})")
     
     # Check if user is authorized
     if not await is_user_authorized(update.message.from_user.id, context):
-        logger.debug(f"/start command DENIED for user {update.message.from_user.id}")
-        logger.info(f"Ignoring /start command from unauthorized user {update.message.from_user.id}")
+        logger.debug(f"/start command DENIED for user {safe_user_log(update.message.from_user.id)}")
+        logger.info(f"Ignoring /start command from unauthorized user {safe_user_log(update.message.from_user.id)}")
         return
     
-    logger.debug(f"/start command APPROVED for user {update.message.from_user.id}")
+    logger.debug(f"/start command APPROVED for user {safe_user_log(update.message.from_user.id)}")
     
     await update.message.reply_text(INTRODUCTION)
 
@@ -639,7 +668,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         - Secure handling of command continuations
         - Input validation and sanitization
     """
-    logger.debug(f"Full update: {update}")
+    logger.debug(f"Full update: {safe_update_log(update)}")
 
     if not is_valid_text_message(update):
         return
@@ -655,16 +684,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     graph_service: GraphService = context.application.bot_data["graph_service"]
 
     if update.message.chat.type == "private":
-        logger.debug(f"Private message received from user {update.message.from_user.id}")
-        logger.debug(f"Message: {update.message.text}")
+        logger.debug(f"Private message received from user {safe_user_log(update.message.from_user.id)}")
+        logger.debug(f"Message: {safe_message_log(update.message.text)}")
         
         # Check if user is authorized
         if not await is_user_authorized(update.message.from_user.id, context):
-            logger.debug(f"Private message DENIED for user {update.message.from_user.id}")
-            logger.info(f"Ignoring private message from unauthorized user {update.message.from_user.id}")
+            logger.debug(f"Private message DENIED for user {safe_user_log(update.message.from_user.id)}")
+            logger.info(f"Ignoring private message from unauthorized user {safe_user_log(update.message.from_user.id)}")
             return
         
-        logger.debug(f"Private message APPROVED for user {update.message.from_user.id}")
+        logger.debug(f"Private message APPROVED for user {safe_user_log(update.message.from_user.id)}")
 
         # Check if user exists in the system (BerlinHouse API check)
         user_exists = await graph_service.check_user_exists(update.message)
@@ -678,12 +707,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Process direct message using memory agent (no command)
         try:
-            logger.debug(f"Processing direct message for user {update.message.from_user.id}")
+            logger.debug(f"Processing direct message for user {safe_user_log(update.message.from_user.id)}")
             response = await ai_service.run(None, update.message.text, update.message.from_user.id)
             await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-            logger.debug(f"Successfully processed direct message for user {update.message.from_user.id}")
+            logger.debug(f"Successfully processed direct message for user {safe_user_log(update.message.from_user.id)}")
         except Exception as e:
-            logger.error(f"Failed to process direct message for user {update.message.from_user.id}: {e}")
+            logger.error(f"Failed to process direct message for user {safe_user_log(update.message.from_user.id)}: {e}")
             await update.message.reply_text("Sorry, I encountered an error processing your message. Please try again later.")
             raise
         return
@@ -691,7 +720,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.reply_to_message:
         # Check if user is authorized for reply-based commands
         if not await is_user_authorized(update.message.from_user.id, context):
-            logger.info(f"Ignoring reply from unauthorized user {update.message.from_user.id}")
+            logger.info(f"Ignoring reply from unauthorized user {safe_user_log(update.message.from_user.id)}")
             return
 
         pending_commands = context.application.bot_data.setdefault("pending_commands", {})
@@ -713,8 +742,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Validate main GROUP_ID
         if settings.GROUP_ID:
             try:
-                int(settings.GROUP_ID)
-                allowed_groups.add(settings.GROUP_ID)
+                validated_group_id = int(settings.GROUP_ID)
+                allowed_groups.add(str(validated_group_id))
             except (ValueError, TypeError):
                 logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
         
@@ -723,8 +752,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
             for gid in additional_groups:
                 try:
-                    int(gid)
-                    allowed_groups.add(gid)
+                    validated_gid = int(gid)
+                    allowed_groups.add(str(validated_gid))
                 except (ValueError, TypeError):
                     logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
                     continue
@@ -776,16 +805,16 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_valid_text_message(update):
         return
 
-    logger.debug(f"Command received from user {update.message.from_user.id}")
-    logger.debug(f"Command: {update.message.text}")
+    logger.debug(f"Command received from user {safe_user_log(update.message.from_user.id)}")
+    logger.debug(f"Command: {safe_message_log(update.message.text)}")
     
     # Check if user is authorized
     if not await is_user_authorized(update.message.from_user.id, context):
-        logger.debug(f"Command DENIED for user {update.message.from_user.id}")
-        logger.info(f"Ignoring command from unauthorized user {update.message.from_user.id}")
+        logger.debug(f"Command DENIED for user {safe_user_log(update.message.from_user.id)}")
+        logger.info(f"Ignoring command from unauthorized user {safe_user_log(update.message.from_user.id)}")
         return
     
-    logger.debug(f"Command APPROVED for user {update.message.from_user.id}")
+    logger.debug(f"Command APPROVED for user {safe_user_log(update.message.from_user.id)}")
 
     try:
         ai_service: AiService = context.application.bot_data["ai_service"]
@@ -793,7 +822,7 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         command = update.message.text.split()[0][1:]
         text_after_command = update.message.text[len(command) + 2:].strip()
         
-        logger.debug(f"Processing command '{command}' from user {update.message.from_user.id}")
+        logger.debug(f"Processing command '{command}' from user {safe_user_log(update.message.from_user.id)}")
 
         # Check if user exists in the system (BerlinHouse API check)
         user_exists = await graph_service.check_user_exists(update.message)
@@ -820,41 +849,11 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         response = await ai_service.run(command, text_after_command, update.message.from_user.id)
         await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-        logger.debug(f"Successfully processed command '{command}' from user {update.message.from_user.id}")
+        logger.debug(f"Successfully processed command '{command}' from user {safe_user_log(update.message.from_user.id)}")
     except Exception as e:
-        logger.error(f"Failed to process command '{command}' from user {update.message.from_user.id}: {e}")
+        logger.error(f"Failed to process command '{command}' from user {safe_user_log(update.message.from_user.id)}: {e}")
         await update.message.reply_text("Sorry, I encountered an error processing your command. Please try again later.")
-        raise 
-
-async def handle_debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Debug command to show chat information for troubleshooting.
-    
-    Provides detailed information about the current chat context for debugging
-    authentication issues, group configurations, and bot behavior.
-    
-    Information Displayed:
-    - Chat ID (for configuration)
-    - Chat Type (private/group/supergroup)
-    - Chat Title (if applicable)
-    - Chat Username (if applicable)
-    - Forum Status (if applicable)
-    
-    Security Notes:
-        - No authentication required (for debugging access issues)
-        - Only reveals chat metadata, not user information
-        - Useful for configuring GROUP_ID and ALLOWED_GROUP_IDS
-        - Helps troubleshoot Soulink authentication problems
-    """
-    chat = update.message.chat
-    chat_info = f"""
-Chat Debug Info:
-- Chat ID: {chat.id}
-- Chat Type: {chat.type}
-- Chat Title: {getattr(chat, 'title', 'Private')}
-- Username: {getattr(chat, 'username', 'None')}
-- Is Forum: {getattr(chat, 'is_forum', False)}
-"""
-    await update.message.reply_text(chat_info)
+        raise
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
