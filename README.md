@@ -74,6 +74,8 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 - **Problem Reporting:** `/report <problem>` to report issues or requests (e.g., facilities, supplies)
 - **Idea Proposals:** `/propose <idea>` to propose new ideas or initiatives for the community
 - **Community Connections:** `/connect <interest>` to find people, projects, or resources
+- **Direct Messages:** Private conversations with memory agent for personalized interactions
+- **Dynamic Agent System:** Specialized AI agents for different tasks with configurable tools
 - **Persistent Memory:** Stores all questions/messages for analytics and context using LangMem
 - **Vector & Graph Search:** Semantic and graph search over documents and community data
 - **Building & Community Info:** Answers questions about the building, amenities, events, and more using structured data
@@ -93,7 +95,9 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 
 ## 🗨️ Command Usage
 
-TowerBot responds to the following commands in your Telegram group:
+TowerBot responds to the following commands in your Telegram group and handles direct messages in private chats:
+
+### Commands (Group Chats)
 
 - `/ask <question>` — Get answers to questions about the building, community, or general topics.  
   _Example:_ `/ask what's the wifi password?`
@@ -105,18 +109,35 @@ TowerBot responds to the following commands in your Telegram group:
   _Example:_ `/connect who can help me learn more about biotech?`
 - `/start` — Get an introduction message with bot capabilities
 
-**Available Tools:**
+### Direct Messages (Private Chats)
+
+- **Conversational AI:** Send any message directly to the bot for personalized responses
+- **Memory Agent:** Uses specialized memory tools for context-aware conversations
+- **Full Authentication:** Requires community membership validation
+- **Persistent Context:** Maintains conversation history across sessions
+
+### Available Tools
+
+**Command Agents (Ask, Report, Propose, Connect):**
 
 - **Tower Information:** Access building details, amenities, and floor plans
 - **Calendar Events:** Get upcoming events from the community calendar
 - **Community Search:** Find connections and relationships in the community graph
 - **Memory Management:** Persistent conversation memory for better context
 
-**Message Processing:**
+**Memory Agent (Direct Messages):**
 
-- All group messages are processed for entity extraction and graph building
-- Reply-based command continuation for complex queries
-- Private message validation (members only)
+- **Memory Management:** Store and retrieve conversation context
+- **Memory Search:** Search through previous conversations and interactions
+- **Conversational AI:** Natural language processing for personalized responses
+
+### Message Processing
+
+- **Group Messages:** All messages processed for entity extraction and graph building
+- **Private Messages:** Direct processing with memory agent for conversational interactions
+- **Reply-based Continuation:** Command continuation for complex queries
+- **Session Management:** Conversation continuity across interactions
+- **Authentication:** Full three-tier validation for all private conversations
 
 If you use a command without context, TowerBot will prompt you for more information with an example.
 
@@ -124,16 +145,18 @@ If you use a command without context, TowerBot will prompt you for more informat
 
 ## 🔐 Authentication & Security
 
-TowerBot implements a comprehensive three-tier authentication system to ensure secure access control:
+TowerBot implements a comprehensive three-tier authentication system to ensure secure access control for both commands and direct messages:
 
 ### Authentication Layers
 
 1. **Group Membership Validation**
+
    - Users must be members of groups specified in `GROUP_ID` or `ALLOWED_GROUP_IDS`
    - Bot automatically leaves unauthorized groups
    - Supports multiple allowed groups for community expansion
 
 2. **Soulink Social Proximity Authentication** (Optional)
+
    - Revolutionary "soul connection" authentication mechanism
    - Requires users to share at least one Telegram group with the designated admin
    - Creates dynamic trust relationships based on social connections
@@ -142,6 +165,13 @@ TowerBot implements a comprehensive three-tier authentication system to ensure s
    - Verifies users are active community members
    - Integrates with community management systems
    - Prevents access from non-community members
+
+### Authentication Flow
+
+- **Commands:** Full three-tier authentication for all bot commands
+- **Direct Messages:** Complete authentication before allowing private conversations
+- **Group Messages:** Group-level validation for knowledge graph processing
+- **Reply Continuation:** Authentication maintained for multi-turn conversations
 
 ### Soulink: How It Works
 
@@ -161,18 +191,21 @@ graph TD
 ```
 
 **Soulink Benefits:**
+
 - **Social Validation:** Ensures users have genuine connection to admin
 - **Dynamic Trust:** Access adjusts automatically as group memberships change
 - **Multi-Community Support:** Works across different communities you manage
 - **Scalable Security:** No need to hardcode every allowed user
 
 **Soulink Configuration:**
+
 ```env
 SOULINK_ENABLED=true
 SOULINK_ADMIN_ID=123456789  # Your Telegram user ID
 ```
 
 **Soulink Use Cases:**
+
 - Community gatekeeping with social validation
 - Multi-community bot deployment
 - Dynamic access control based on relationships
@@ -193,13 +226,26 @@ SOULINK_ADMIN_ID=123456789  # Your Telegram user ID
 ```mermaid
 graph TD;
   TG["Telegram Group"] -->|/ask, /report, /propose, /connect| BOT["TowerBot (python-telegram-bot)"]
+  PM["Private Messages"] -->|Direct Messages| BOT
   BOT --> API["FastAPI Backend"]
-  API --> AI["Azure OpenAI (LangChain)"]
+  API --> AI["Dynamic AI Agents"]
+  AI --> AG["Ask Agent<br/>QA Tools + Memory"]
+  AI --> RP["Report Agent<br/>QA Tools + Memory"]
+  AI --> PP["Propose Agent<br/>QA Tools + Memory"]
+  AI --> CN["Connect Agent<br/>Graph Tools + Memory"]
+  AI --> MM["Memory Agent<br/>Memory Tools Only"]
   API --> DB["Supabase (Vectors)"]
   API --> GRAPH["Neo4j (Graph DB) + Graphiti"]
   API --> Health["/health Endpoint"]
   API --> Webhook["/telegram Endpoint"]
 ```
+
+**Agent System:**
+
+- **Dynamic Configuration:** Easy addition of new agent types via AgentConfig
+- **Specialized Tools:** Each agent has access to relevant tools for its purpose
+- **Memory Integration:** All agents share memory capabilities for context retention
+- **Session Management:** Conversation continuity across all interaction types
 
 ---
 
@@ -280,6 +326,7 @@ The Telegram bot will start automatically as a background task.
 
 - Add your bot to a Telegram group.
 - Use `/ask`, `/report`, `/propose`, or `/connect` to interact with the bot.
+- Send direct messages in private chats for conversational AI interactions.
 
 ---
 
@@ -358,7 +405,7 @@ towerbot/
 │   │   ├── responses.py       # Pydantic models for AI responses
 │   │   └── tools.py           # Tool parameter schemas and enums
 │   ├── services/
-│   │   ├── ai.py              # AI service with LangChain agents
+│   │   ├── ai.py              # Dynamic AI service with configurable agents
 │   │   ├── database.py        # Async database operations with connection pooling
 │   │   └── graph.py           # Neo4j graph service with Graphiti
 │   ├── main.py                # FastAPI application and endpoints
@@ -376,11 +423,19 @@ towerbot/
 
 **Key Components:**
 
-- **Core Services:** AI agents, database operations, graph processing
+- **AI Service:** Dynamic agent system with specialized tools and memory integration
+- **Core Services:** Database operations, graph processing, and lifecycle management
 - **Data Schemas:** Structured schemas for entities, responses, and tools
 - **API Layer:** FastAPI endpoints for health checks and webhook handling
 - **Configuration:** Environment-based settings with Pydantic validation
 - **Logging:** Comprehensive structured logging across all modules
+
+**Agent Architecture:**
+
+- **AgentConfig:** Configuration class for dynamic agent creation
+- **Specialized Agents:** Ask, Report, Propose, Connect, and Memory agents
+- **Tool Integration:** Each agent has access to relevant tools and memory
+- **Session Management:** Conversation continuity across all interaction types
 
 ---
 

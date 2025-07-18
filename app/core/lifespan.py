@@ -6,6 +6,7 @@ task scheduling, and comprehensive multi-layered authentication system.
 
 Key Features:
 - Multi-layered authentication (Group membership + Soulink + BerlinHouse API)
+- Dynamic AI agent system with command-based and direct message processing
 - Robust error handling for Telegram API calls
 - Automatic unauthorized group detection and bot removal
 - Secure supergroup message processing
@@ -16,6 +17,13 @@ Authentication Flow:
 2. Soulink (Optional): User must share at least one group with designated admin
 3. BerlinHouse API: User must be verified community member
 4. Command Processing: Only authorized users can execute bot commands
+5. Direct Messages: Full authentication for private chat conversations
+
+Message Processing:
+- Private Chats: Direct message processing using memory agent with full authentication
+- Supergroups: Knowledge graph extraction for authorized groups
+- Commands: AI-powered responses with specialized tools (/ask, /report, /propose, /connect)
+- Replies: Command continuation with conversation context
 
 Soulink Authentication System:
 Soulink is TowerBot's innovative "social proximity" authentication mechanism that creates
@@ -46,6 +54,7 @@ Security Features:
 - Rate limiting detection and logging
 - Automatic bot removal from unauthorized groups
 - Comprehensive audit logging for all authentication attempts
+- Secure direct message processing with memory agent
 """
 
 import logging
@@ -73,7 +82,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.services.ai import AiService
 from app.services.graph import GraphService
-from app.services.database import DatabaseService
 from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 
 logger = logging.getLogger(__name__)
@@ -416,7 +424,6 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
 
 def create_application(
     ai_service: AiService,
-    db_service: DatabaseService,
     graph_service: GraphService,
 ):
     """Create and configure the Telegram bot application with comprehensive security.
@@ -429,6 +436,7 @@ def create_application(
     - Automatic unauthorized group detection and removal
     - Secure supergroup message processing
     - Command authorization with BerlinHouse API validation
+    - Direct message processing with memory agent
     - Debug command for chat information
     
     Handlers Configured:
@@ -437,10 +445,12 @@ def create_application(
     - /debug: Chat information display
     - Chat member updates: Automatic group management
     - Text messages: Context-aware processing with security checks
+      * Private chats: Direct message processing using memory agent
+      * Supergroups: Knowledge graph extraction
+      * Replies: Command continuation with conversation context
     
     Args:
         ai_service: AI service instance for processing commands and responses
-        db_service: Database service for data persistence and logging
         graph_service: Graph service for knowledge graph operations and user validation
         
     Returns:
@@ -451,10 +461,10 @@ def create_application(
         - Bot will automatically leave unauthorized groups
         - All user interactions are logged for audit purposes
         - Error handling prevents information leakage
+        - Direct messages use memory agent for conversational interactions
     """
     bot_data = {
         "ai_service": ai_service,
-        "db_service": db_service,
         "graph_service": graph_service,
     }
 
@@ -598,7 +608,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle incoming text messages with context-aware security processing.
     
     Processes text messages based on chat type with appropriate security measures:
-    - Private chats: Full three-tier authentication + user guidance
+    - Private chats: Full three-tier authentication + direct message processing with memory agent
     - Supergroups: Group authorization + knowledge graph extraction
     - Reply handling: Authentication + command continuation
     
@@ -606,7 +616,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     1. Group membership validation
     2. Soulink authentication (if enabled)
     3. BerlinHouse API user existence check
-    4. Guidance message for direct conversations
+    4. Direct message processing using memory agent
     
     Supergroup Processing:
     1. Chat ID validation against allowed groups
@@ -641,9 +651,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"Message from chat_id={chat_id}, type={chat_type}, title='{chat_title}'")
 
-    db_service: DatabaseService = context.application.bot_data["db_service"]
-    graph_service: GraphService = context.application.bot_data["graph_service"]
     ai_service: AiService = context.application.bot_data["ai_service"]
+    graph_service: GraphService = context.application.bot_data["graph_service"]
 
     if update.message.chat.type == "private":
         logger.debug(f"Private message received from user {update.message.from_user.id}")
@@ -657,7 +666,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.debug(f"Private message APPROVED for user {update.message.from_user.id}")
 
-        # TODO: Confirm via BerlinHouse API if citizen is active
+        # Check if user exists in the system (BerlinHouse API check)
         user_exists = await graph_service.check_user_exists(update.message)
         logger.debug(f"user_exists: {user_exists}")
         if not user_exists:
@@ -667,7 +676,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        await update.message.reply_text("Direct conversations are coming soon. In the meantime, you can use commands (e.g. /ask, /report, /propose, /connect).")
+        # Process direct message using memory agent (no command)
+        try:
+            logger.debug(f"Processing direct message for user {update.message.from_user.id}")
+            response = await ai_service.run(None, update.message.text, update.message.from_user.id)
+            await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+            logger.debug(f"Successfully processed direct message for user {update.message.from_user.id}")
+        except Exception as e:
+            logger.error(f"Failed to process direct message for user {update.message.from_user.id}: {e}")
+            await update.message.reply_text("Sorry, I encountered an error processing your message. Please try again later.")
+            raise
         return
 
     if update.message.reply_to_message:
@@ -684,7 +702,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text_after_command = update.message.text.strip()
             response = await ai_service.run(command, text_after_command, update.message.from_user.id)
             await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-            await db_service.save_command(update.message, response, command)
             del pending_commands[replied_id]
             return
 
@@ -772,7 +789,6 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         ai_service: AiService = context.application.bot_data["ai_service"]
-        db_service: DatabaseService = context.application.bot_data["db_service"]
         graph_service: GraphService = context.application.bot_data["graph_service"]
         command = update.message.text.split()[0][1:]
         text_after_command = update.message.text[len(command) + 2:].strip()
@@ -804,7 +820,6 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         response = await ai_service.run(command, text_after_command, update.message.from_user.id)
         await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-        await db_service.save_command(update.message, response, command)
         logger.debug(f"Successfully processed command '{command}' from user {update.message.from_user.id}")
     except Exception as e:
         logger.error(f"Failed to process command '{command}' from user {update.message.from_user.id}: {e}")
@@ -879,7 +894,6 @@ async def lifespan(app: FastAPI):
         
     State Management:
         - app.state.ai_service: AI service for command processing
-        - app.state.db_service: Database service for persistence
         - app.state.graph_service: Graph service for knowledge management
         - app.state.tg_app: Telegram bot application
         - app.state.scheduler: Background task scheduler
@@ -919,20 +933,18 @@ async def lifespan(app: FastAPI):
 
         ai_service = AiService()
         graph_service = GraphService()
-        db_service = DatabaseService(pool)
 
         ai_service.connect(llm, store, checkpointer)
 
         await graph_service.connect()
 
-        tg_app = create_application(ai_service, db_service, graph_service)
+        tg_app = create_application(ai_service, graph_service)
 
         await tg_app.initialize()
 
         scheduler = start_scheduler(graph_service)
 
         app.state.ai_service = ai_service
-        app.state.db_service = db_service
         app.state.graph_service = graph_service
         app.state.tg_app = tg_app
         app.state.scheduler = scheduler
