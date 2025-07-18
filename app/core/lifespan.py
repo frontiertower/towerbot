@@ -710,7 +710,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             logger.debug(f"Processing direct message for user {safe_user_log(update.message.from_user.id)}")
             response = await ai_service.run(None, update.message.text, update.message.from_user.id)
-            await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+            await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
             logger.debug(f"Successfully processed direct message for user {safe_user_log(update.message.from_user.id)}")
         except Exception as e:
             logger.error(f"Failed to process direct message for user {safe_user_log(update.message.from_user.id)}: {e}")

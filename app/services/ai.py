@@ -50,10 +50,8 @@ class AiService:
         return thread_id
 
     async def run(self, command: str, message: str, user_id: int):
-        agent = self.agent if command == "ask" else self.connect_agent
-
-        if not agent:
-            raise RuntimeError("Agent not initialized. Call connect() on startup.")
+        if not command or command.strip() == "":
+            return "Please provide a command to run."
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
