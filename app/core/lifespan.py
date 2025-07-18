@@ -6,6 +6,7 @@ task scheduling, and comprehensive multi-layered authentication system.
 
 Key Features:
 - Multi-layered authentication (Group membership + Soulink + BerlinHouse API)
+- Dynamic AI agent system with command-based and direct message processing
 - Robust error handling for Telegram API calls
 - Automatic unauthorized group detection and bot removal
 - Secure supergroup message processing
@@ -16,6 +17,13 @@ Authentication Flow:
 2. Soulink (Optional): User must share at least one group with designated admin
 3. BerlinHouse API: User must be verified community member
 4. Command Processing: Only authorized users can execute bot commands
+5. Direct Messages: Full authentication for private chat conversations
+
+Message Processing:
+- Private Chats: Direct message processing using memory agent with full authentication
+- Supergroups: Knowledge graph extraction for authorized groups
+- Commands: AI-powered responses with specialized tools (/ask, /report, /propose, /connect)
+- Replies: Command continuation with conversation context
 
 Soulink Authentication System:
 Soulink is TowerBot's innovative "social proximity" authentication mechanism that creates
@@ -46,6 +54,7 @@ Security Features:
 - Rate limiting detection and logging
 - Automatic bot removal from unauthorized groups
 - Comprehensive audit logging for all authentication attempts
+- Secure direct message processing with memory agent
 """
 
 import logging
@@ -429,6 +438,7 @@ def create_application(
     - Automatic unauthorized group detection and removal
     - Secure supergroup message processing
     - Command authorization with BerlinHouse API validation
+    - Direct message processing with memory agent
     - Debug command for chat information
     
     Handlers Configured:
@@ -437,6 +447,9 @@ def create_application(
     - /debug: Chat information display
     - Chat member updates: Automatic group management
     - Text messages: Context-aware processing with security checks
+      * Private chats: Direct message processing using memory agent
+      * Supergroups: Knowledge graph extraction
+      * Replies: Command continuation with conversation context
     
     Args:
         ai_service: AI service instance for processing commands and responses
@@ -451,6 +464,7 @@ def create_application(
         - Bot will automatically leave unauthorized groups
         - All user interactions are logged for audit purposes
         - Error handling prevents information leakage
+        - Direct messages use memory agent for conversational interactions
     """
     bot_data = {
         "ai_service": ai_service,

@@ -1,7 +1,23 @@
 """AI service module for TowerBot intelligent agent operations.
 
 This module provides the AiService class for managing AI agents that handle
-user queries and connection requests using LangChain and LangGraph frameworks.
+user queries, connection requests, and direct messages using LangChain and LangGraph frameworks.
+
+The AiService implements a dynamic agent configuration system that supports:
+- Command-based agents: /ask, /report, /propose, /connect with specialized tools
+- Direct message agent: Memory-only agent for conversational interactions
+- Dynamic agent creation: Easy addition of new agent types via AgentConfig
+- Session management: Conversation continuity across interactions
+- Memory integration: All agents have access to memory tools for context retention
+
+Agent Types:
+- Ask Agent: General questions and information retrieval with QA tools
+- Report Agent: Community reports and observations with QA tools  
+- Propose Agent: Suggestions and proposals with QA tools
+- Connect Agent: Connection requests and network searches with graph tools
+- Memory Agent: Direct message processing with memory operations only
+
+All agents share common memory and checkpointing capabilities for conversation continuity.
 """
 import uuid
 import logging
@@ -73,7 +89,6 @@ class AiService:
         ]
         
         return {
-            # QA Agent for general questions
             "ask": AgentConfig(
                 name="Ask",
                 response_format=QuestionResponse,
@@ -92,7 +107,6 @@ class AiService:
                 tools=[*get_qa_agent_tools(llm), *memory_tools],
                 description="Handles proposal and suggestion requests"
             ),
-            # Connect Agent for network searches
             "connect": AgentConfig(
                 name="Connect",
                 response_format=ConnectionResponse,
