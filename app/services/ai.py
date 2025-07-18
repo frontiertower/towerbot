@@ -3,8 +3,10 @@
 This module provides the AiService class for managing AI agents that handle
 user queries and connection requests using LangChain and LangGraph frameworks.
 """
-
+import uuid
 import logging
+
+from datetime import datetime
 
 from langchain_openai import AzureChatOpenAI
 from langgraph.prebuilt import create_react_agent
@@ -35,6 +37,7 @@ class AiService:
         """Initialize the AiService with empty agent references."""
         self.qa_agent = None
         self.connect_agent = None
+        self.user_sessions = {}  # Track active sessions per user
 
     def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
         """Initialize and configure the AI agents.
@@ -77,6 +80,25 @@ class AiService:
             logger.error(f"Failed to initialize AI agents: {e}")
             raise
 
+    def _get_or_create_session(self, user_id: int, command: str) -> str:
+        """Get existing session or create new one for user+command combination."""
+        session_key = f"{user_id}_{command}"
+        
+        # Check if user has an active session for this command type
+        if session_key in self.user_sessions:
+            # Check if session is recent (within last hour)
+            session_time = self.user_sessions[session_key]['created_at']
+            if (datetime.now() - session_time).seconds < 3600:
+                return self.user_sessions[session_key]['thread_id']
+        
+        # Create new session
+        thread_id = f"{user_id}_{command}_{uuid.uuid4().hex[:8]}"
+        self.user_sessions[session_key] = {
+            'thread_id': thread_id,
+            'created_at': datetime.now()
+        }
+        return thread_id
+
     async def run(self, command: str, message: str, user_id: int):
         """Execute a command using the appropriate AI agent.
         
@@ -105,11 +127,13 @@ class AiService:
             {"role": "user", "content": message}
         ]
 
+        thread_id = self._get_or_create_session(user_id, command)
+        
         config = {
             'recursion_limit': 50,
             "configurable": {
                 "user_id": str(user_id),
-                "thread_id": str(user_id)
+                "thread_id": thread_id
             }
         }
 
