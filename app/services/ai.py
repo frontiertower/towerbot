@@ -1,14 +1,15 @@
 import uuid
 import logging
 
-from typing import Dict, Any
 from datetime import datetime
+from typing import Dict, Any, Optional
 
 from langsmith import Client
 from langchain_openai import AzureChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.store.postgres.base import BasePostgresStore
 from langgraph.checkpoint.postgres.base import BasePostgresSaver
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
 from app.core.constants import SYSTEM_PROMPT
@@ -20,12 +21,14 @@ class AiService:
     def __init__(self):
         self.agent = None
         self.client = Client()
+        self.llm: Optional[AzureChatOpenAI] = None
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
 
     def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
+        self.llm = llm
         self.agent = create_react_agent(
             name="TowerBot",
-            model=llm,
+            model=self.llm,
             tools=[
                 create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
                 create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
@@ -48,8 +51,23 @@ class AiService:
             'created_at': datetime.now()
         }
         return thread_id
+    
+    async def _handle_ask_command(self, message: str):
+        tools = get_qa_agent_tools(self.llm)
+        prompt = self.client.pull_prompt("hwchase17/openai-tools-agent")
+
+        agent = create_tool_calling_agent(self.llm, tools, prompt)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+        response = await agent_executor.ainvoke({
+                "input": message
+            })
+        return response.get("output")
 
     async def run(self, command: str, message: str, user_id: int):
+        if command == "ask":
+            return await self._handle_ask_command(message)
+
         if not command or command.strip() == "":
             command = "direct"
 

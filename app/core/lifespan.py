@@ -731,7 +731,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             command = pending["command"]
             text_after_command = update.message.text.strip()
             response = await ai_service.run(command, text_after_command, update.message.from_user.id)
-            await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+            await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
             del pending_commands[replied_id]
             return
 
@@ -849,7 +849,7 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         response = await ai_service.run(command, text_after_command, update.message.from_user.id)
-        await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+        await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
         logger.debug(f"Successfully processed command '{command}' from user {safe_user_log(update.message.from_user.id)}")
     except Exception as e:
         logger.error(f"Failed to process command '{command}' from user {safe_user_log(update.message.from_user.id)}: {e}")
