@@ -500,7 +500,8 @@ def create_application(
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
     application.bot_data.update(bot_data)
     application.add_handler(CommandHandler("start", handle_start))
-    application.add_handler(CommandHandler(["ask", "report", "propose", "connect"], handle_command))
+    application.add_handler(CommandHandler(["ask", "connect"], handle_command))
+    # application.add_handler(CommandHandler(["ask", "report", "propose", "connect"], handle_command))
     application.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
