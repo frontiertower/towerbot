@@ -17,6 +17,29 @@ Authentication Flow:
 3. BerlinHouse API: User must be verified community member
 4. Command Processing: Only authorized users can execute bot commands
 
+Soulink Authentication System:
+Soulink is TowerBot's innovative "social proximity" authentication mechanism that creates
+a trust relationship based on shared group memberships. Named after the concept of a
+"soul connection," Soulink ensures users have some social bond with the bot administrator.
+
+How Soulink Works:
+- Admin sets their Telegram user ID in SOULINK_ADMIN_ID configuration
+- When enabled, users must share at least ONE Telegram group with the admin
+- Bot checks all groups where both user and admin are members
+- If any shared groups exist, user passes Soulink authentication
+- If no shared groups, user is denied access regardless of other permissions
+
+Soulink Benefits:
+- Social Validation: Ensures users have genuine social connection to admin
+- Dynamic Trust: Access automatically adjusts as group memberships change
+- Scalable Security: Works across multiple communities without hardcoding
+- Indirect Membership: Users don't need to be in the "main" group specifically
+
+Soulink Configuration:
+- SOULINK_ENABLED=true/false (default: false)
+- SOULINK_ADMIN_ID=<admin_telegram_user_id>
+- Works with existing GROUP_ID and ALLOWED_GROUP_IDS settings
+
 Security Features:
 - Input validation for all configuration values
 - Specific exception handling for different error types

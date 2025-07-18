@@ -31,6 +31,28 @@ class Settings(BaseSettings):
         ALLOWED_GROUP_IDS: Comma-separated additional group IDs (optional)
         SOULINK_ENABLED: Enable Soulink social proximity authentication (default: False)
         SOULINK_ADMIN_ID: Admin user ID for Soulink validation (required if SOULINK_ENABLED=True)
+        
+    Soulink Authentication System:
+        Soulink is TowerBot's "social proximity" authentication layer that requires users
+        to share at least one Telegram group with a designated admin. This creates a
+        trust relationship based on social connections rather than just group membership.
+        
+        Soulink Mechanism:
+        1. Admin configures their Telegram user ID in SOULINK_ADMIN_ID
+        2. Bot discovers all groups where both user and admin are members
+        3. If any shared groups exist, user passes Soulink authentication
+        4. If no shared groups, user is denied access
+        
+        Soulink Use Cases:
+        - Community gatekeeping: Ensure users are "vouched for" by shared membership
+        - Multi-community access: Allow users across different communities you manage
+        - Dynamic trust: Automatically grant/revoke access as relationships change
+        - Social validation: Verify users have genuine connection to admin
+        
+        Soulink Configuration Examples:
+        - SOULINK_ENABLED=false (default): Soulink disabled, only group membership checked
+        - SOULINK_ENABLED=true + SOULINK_ADMIN_ID=123456789: Enables social proximity check
+        - Works with GROUP_ID and ALLOWED_GROUP_IDS for comprehensive access control
     
     Service Configuration:
         BOT_TOKEN: Telegram bot token (required)

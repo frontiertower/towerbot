@@ -84,7 +84,10 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 - **Webhook Endpoint:** `/telegram` endpoint for Telegram updates
 - **Scheduled Community Analytics:** Uses APScheduler to run periodic community graph updates
 - **Message Processing:** Processes all group messages for entity extraction and graph building
+- **Multi-Layered Authentication:** Advanced three-tier authentication system including Soulink
 - **User Validation:** Validates user membership before allowing private conversations
+- **Automatic Group Management:** Bot automatically leaves unauthorized groups
+- **Soulink Social Proximity:** Optional authentication based on shared group memberships
 
 ---
 
@@ -116,6 +119,72 @@ TowerBot responds to the following commands in your Telegram group:
 - Private message validation (members only)
 
 If you use a command without context, TowerBot will prompt you for more information with an example.
+
+---
+
+## 🔐 Authentication & Security
+
+TowerBot implements a comprehensive three-tier authentication system to ensure secure access control:
+
+### Authentication Layers
+
+1. **Group Membership Validation**
+   - Users must be members of groups specified in `GROUP_ID` or `ALLOWED_GROUP_IDS`
+   - Bot automatically leaves unauthorized groups
+   - Supports multiple allowed groups for community expansion
+
+2. **Soulink Social Proximity Authentication** (Optional)
+   - Revolutionary "soul connection" authentication mechanism
+   - Requires users to share at least one Telegram group with the designated admin
+   - Creates dynamic trust relationships based on social connections
+
+3. **BerlinHouse API Validation**
+   - Verifies users are active community members
+   - Integrates with community management systems
+   - Prevents access from non-community members
+
+### Soulink: How It Works
+
+Soulink is TowerBot's innovative authentication layer that creates trust based on shared group memberships:
+
+```mermaid
+graph TD
+    User[User Requests Access] --> Check1[Check Group Membership]
+    Check1 --> Check2[Check Soulink if Enabled]
+    Check2 --> GetGroups[Get User Groups]
+    GetGroups --> GetAdminGroups[Get Admin Groups]
+    GetAdminGroups --> Compare[Find Shared Groups]
+    Compare --> Shared{Any Shared Groups?}
+    Shared -->|Yes| Check3[Check BerlinHouse API]
+    Shared -->|No| Deny[Deny Access]
+    Check3 --> Allow[Allow Access]
+```
+
+**Soulink Benefits:**
+- **Social Validation:** Ensures users have genuine connection to admin
+- **Dynamic Trust:** Access adjusts automatically as group memberships change
+- **Multi-Community Support:** Works across different communities you manage
+- **Scalable Security:** No need to hardcode every allowed user
+
+**Soulink Configuration:**
+```env
+SOULINK_ENABLED=true
+SOULINK_ADMIN_ID=123456789  # Your Telegram user ID
+```
+
+**Soulink Use Cases:**
+- Community gatekeeping with social validation
+- Multi-community bot deployment
+- Dynamic access control based on relationships
+- Preventing unauthorized access through social proximity
+
+### Security Features
+
+- **Automatic Group Management:** Bot leaves unauthorized groups immediately
+- **Robust Error Handling:** Handles API failures gracefully
+- **Comprehensive Logging:** All authentication attempts logged for audit
+- **Input Validation:** Configuration values validated at startup
+- **Rate Limiting Detection:** Monitors and handles API rate limits
 
 ---
 
@@ -158,7 +227,12 @@ WEBHOOK_URL=https://your-server-url  # Public webhook URL
 
 # Telegram Bot
 BOT_TOKEN=your-telegram-bot-token    # From @BotFather
-GROUP_ID=your-telegram-group-id      # Target group ID
+GROUP_ID=your-telegram-group-id      # Target group ID (negative number)
+ALLOWED_GROUP_IDS=group1,group2      # Optional: Additional allowed groups (comma-separated)
+
+# Soulink Authentication (Optional)
+SOULINK_ENABLED=false                # Enable Soulink social proximity authentication
+SOULINK_ADMIN_ID=your-telegram-user-id # Admin user ID for Soulink validation
 
 # Azure OpenAI
 AZURE_OPENAI_API_KEY=your-azure-openai-key
