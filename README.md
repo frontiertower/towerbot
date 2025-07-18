@@ -1,4 +1,6 @@
-# TowerBot
+<p align="center">
+  <img src="static/images/bot.png" alt="TowerBot Logo" width="200"/>
+</p>
 
 [![Project Status](https://img.shields.io/badge/status-active-brightgreen)](https://github.com/frontiertower/towerbot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -36,6 +38,7 @@ TowerBot connects your Telegram group to powerful AI and community data. It can 
 - **Graphiti** (temporal knowledge graph)
 - **APScheduler** (scheduled jobs)
 - **LangChain, LangGraph, LangMem** (advanced LLM/graph features)
+- **LangSmith** (LLM observability and tracing)
 - **Pydantic** (settings and validation)
 - **psycopg_pool** (async Postgres connection pool)
 - **Docker** (optional, for deployment)
@@ -157,7 +160,7 @@ TowerBot implements a comprehensive three-tier authentication system to ensure s
 
 2. **Soulink Social Proximity Authentication** (Optional)
 
-   - Revolutionary "soul connection" authentication mechanism
+   - A "soul connection" authentication mechanism based on social proximity
    - Requires users to share at least one Telegram group with the designated admin
    - Creates dynamic trust relationships based on social connections
 
@@ -175,7 +178,7 @@ TowerBot implements a comprehensive three-tier authentication system to ensure s
 
 ### Soulink: How It Works
 
-Soulink is TowerBot's innovative authentication layer that creates trust based on shared group memberships:
+Soulink is TowerBot's authentication layer that creates trust based on shared group memberships:
 
 ```mermaid
 graph TD
@@ -300,9 +303,9 @@ BERLINHOUSE_EMAIL=your-email         # For BerlinHouse API
 BERLINHOUSE_PASSWORD=your-password
 
 # Observability (Optional)
-LANGSMITH_API_KEY=your-langsmith-api-key
-LANGSMITH_PROJECT=your-langsmith-project
-LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your-langsmith-api-key      # LangSmith API key for tracing
+LANGSMITH_PROJECT=your-langsmith-project      # LangSmith project name
+LANGSMITH_TRACING=true                        # Enable LangSmith tracing
 ```
 
 ### 3. Run Locally
@@ -489,6 +492,7 @@ We welcome contributions from everyone! To get started:
 - **Performance Monitoring:** Request/response timing and processing logs
 - **Service Health:** Connection status for all external services
 - **Log Levels:** Configurable DEBUG, INFO, WARNING, ERROR levels
+- **LangSmith Integration:** LLM observability and tracing for AI operations
 
 ### Health Check Response
 
@@ -505,6 +509,23 @@ We welcome contributions from everyone! To get started:
 - **Runtime:** Background message processing and scheduled tasks
 - **Shutdown:** Graceful cleanup of connections and resources
 
+### LangSmith Observability
+
+TowerBot integrates with LangSmith for comprehensive LLM observability and tracing:
+
+- **Agent Tracing:** Complete visibility into AI agent decision-making processes
+- **Performance Metrics:** Track response times, token usage, and model performance
+- **Error Debugging:** Detailed traces for troubleshooting AI operations
+- **Conversation Analytics:** Track user interactions and conversation patterns
+- **Tool Usage Monitoring:** Monitor how agents use tools and external APIs
+
+**Configuration:**
+```env
+LANGSMITH_API_KEY=your-langsmith-api-key
+LANGSMITH_PROJECT=your-project-name
+LANGSMITH_TRACING=true
+```
+
 ---
 
 ## 📚 Resources
@@ -513,6 +534,7 @@ We welcome contributions from everyone! To get started:
 - [python-telegram-bot](https://python-telegram-bot.org/)
 - [Supabase Docs](https://supabase.com/docs)
 - [LangChain](https://python.langchain.com/)
+- [LangSmith](https://docs.smith.langchain.com/)
 - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
 - [Neo4j](https://neo4j.com/docs/)
 - [Graphiti](https://github.com/getzep/graphiti)
