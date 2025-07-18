@@ -598,7 +598,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle incoming text messages with context-aware security processing.
     
     Processes text messages based on chat type with appropriate security measures:
-    - Private chats: Full three-tier authentication + user guidance
+    - Private chats: Full three-tier authentication + direct message processing with memory agent
     - Supergroups: Group authorization + knowledge graph extraction
     - Reply handling: Authentication + command continuation
     
@@ -606,7 +606,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     1. Group membership validation
     2. Soulink authentication (if enabled)
     3. BerlinHouse API user existence check
-    4. Guidance message for direct conversations
+    4. Direct message processing using memory agent
     
     Supergroup Processing:
     1. Chat ID validation against allowed groups
@@ -657,7 +657,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.debug(f"Private message APPROVED for user {update.message.from_user.id}")
 
-        # TODO: Confirm via BerlinHouse API if citizen is active
+        # Check if user exists in the system (BerlinHouse API check)
         user_exists = await graph_service.check_user_exists(update.message)
         logger.debug(f"user_exists: {user_exists}")
         if not user_exists:
@@ -667,7 +667,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        await update.message.reply_text("Direct conversations are coming soon. In the meantime, you can use commands (e.g. /ask, /report, /propose, /connect).")
+        # Process direct message using memory agent (no command)
+        try:
+            logger.debug(f"Processing direct message for user {update.message.from_user.id}")
+            response = await ai_service.run(None, update.message.text, update.message.from_user.id)
+            await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+            await db_service.save_command(update.message, response, "direct")
+            logger.debug(f"Successfully processed direct message for user {update.message.from_user.id}")
+        except Exception as e:
+            logger.error(f"Failed to process direct message for user {update.message.from_user.id}: {e}")
+            await update.message.reply_text("Sorry, I encountered an error processing your message. Please try again later.")
+            raise
         return
 
     if update.message.reply_to_message:
