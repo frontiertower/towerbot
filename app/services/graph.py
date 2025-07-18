@@ -297,7 +297,7 @@ class GraphService:
         iso_timestamp = message.date.astimezone(timezone.utc).isoformat()
         message_node = Message(
             message_id=message.message_id,
-            text=message.text,
+            text=message.text or "",
             timestamp=iso_timestamp
         )
         cypher = """

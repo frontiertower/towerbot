@@ -10,7 +10,6 @@ class User(BaseModel):
     last_name: Optional[str] = Field(None, description="The user's last name, if available.")
     floor: Optional[int] = Field(None, description="The level of the floor this user is a member of, if any.")
     bio: Optional[str] = Field(None, description="A short biography or summary of the user's interests and background.")
-    skills: Optional[List[str]] = Field(default_factory=list, description="A list of the user's skills or areas of expertise.")
 
     class Config:
         label = "User"
