@@ -82,7 +82,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.services.ai import AiService
 from app.services.graph import GraphService
-from app.services.database import DatabaseService
 from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 
 logger = logging.getLogger(__name__)
@@ -425,7 +424,6 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
 
 def create_application(
     ai_service: AiService,
-    db_service: DatabaseService,
     graph_service: GraphService,
 ):
     """Create and configure the Telegram bot application with comprehensive security.
@@ -453,7 +451,6 @@ def create_application(
     
     Args:
         ai_service: AI service instance for processing commands and responses
-        db_service: Database service for data persistence and logging
         graph_service: Graph service for knowledge graph operations and user validation
         
     Returns:
@@ -468,7 +465,6 @@ def create_application(
     """
     bot_data = {
         "ai_service": ai_service,
-        "db_service": db_service,
         "graph_service": graph_service,
     }
 
@@ -655,9 +651,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"Message from chat_id={chat_id}, type={chat_type}, title='{chat_title}'")
 
-    db_service: DatabaseService = context.application.bot_data["db_service"]
-    graph_service: GraphService = context.application.bot_data["graph_service"]
     ai_service: AiService = context.application.bot_data["ai_service"]
+    graph_service: GraphService = context.application.bot_data["graph_service"]
 
     if update.message.chat.type == "private":
         logger.debug(f"Private message received from user {update.message.from_user.id}")
@@ -686,7 +681,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.debug(f"Processing direct message for user {update.message.from_user.id}")
             response = await ai_service.run(None, update.message.text, update.message.from_user.id)
             await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-            await db_service.save_command(update.message, response, "direct")
             logger.debug(f"Successfully processed direct message for user {update.message.from_user.id}")
         except Exception as e:
             logger.error(f"Failed to process direct message for user {update.message.from_user.id}: {e}")
@@ -708,7 +702,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text_after_command = update.message.text.strip()
             response = await ai_service.run(command, text_after_command, update.message.from_user.id)
             await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-            await db_service.save_command(update.message, response, command)
             del pending_commands[replied_id]
             return
 
@@ -796,7 +789,6 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         ai_service: AiService = context.application.bot_data["ai_service"]
-        db_service: DatabaseService = context.application.bot_data["db_service"]
         graph_service: GraphService = context.application.bot_data["graph_service"]
         command = update.message.text.split()[0][1:]
         text_after_command = update.message.text[len(command) + 2:].strip()
@@ -828,7 +820,6 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         response = await ai_service.run(command, text_after_command, update.message.from_user.id)
         await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-        await db_service.save_command(update.message, response, command)
         logger.debug(f"Successfully processed command '{command}' from user {update.message.from_user.id}")
     except Exception as e:
         logger.error(f"Failed to process command '{command}' from user {update.message.from_user.id}: {e}")
@@ -903,7 +894,6 @@ async def lifespan(app: FastAPI):
         
     State Management:
         - app.state.ai_service: AI service for command processing
-        - app.state.db_service: Database service for persistence
         - app.state.graph_service: Graph service for knowledge management
         - app.state.tg_app: Telegram bot application
         - app.state.scheduler: Background task scheduler
@@ -943,20 +933,18 @@ async def lifespan(app: FastAPI):
 
         ai_service = AiService()
         graph_service = GraphService()
-        db_service = DatabaseService(pool)
 
         ai_service.connect(llm, store, checkpointer)
 
         await graph_service.connect()
 
-        tg_app = create_application(ai_service, db_service, graph_service)
+        tg_app = create_application(ai_service, graph_service)
 
         await tg_app.initialize()
 
         scheduler = start_scheduler(graph_service)
 
         app.state.ai_service = ai_service
-        app.state.db_service = db_service
         app.state.graph_service = graph_service
         app.state.tg_app = tg_app
         app.state.scheduler = scheduler
