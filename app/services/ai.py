@@ -51,26 +51,26 @@ class AiService:
 
     async def run(self, command: str, message: str, user_id: int):
         if not command or command.strip() == "":
-            return "Please provide a command to run."
+            command = "direct"
 
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
-            {"role": "user", "content": message}
-        ]
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
+                {"role": "user", "content": message}
+            ]
 
-        thread_id = self._get_or_create_session(user_id, command)
+            thread_id = self._get_or_create_session(user_id, command)
 
-        config = {
-            'recursion_limit': 50,
-            "configurable": {
-                "user_id": str(user_id),
-                "thread_id": thread_id
+            config = {
+                'recursion_limit': 50,
+                "configurable": {
+                    "user_id": str(user_id),
+                    "thread_id": thread_id
+                }
             }
-        }
 
-        response = await agent.ainvoke(
-            {"messages": messages},
-            config=config
-        )
+            response = await self.agent.ainvoke(
+                {"messages": messages},
+                config=config
+            )
 
-        return response["messages"][-1].content
+            return response["messages"][-1].content
