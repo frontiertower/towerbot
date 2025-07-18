@@ -1,7 +1,16 @@
 """Configuration settings module for TowerBot.
 
-This module defines the application configuration using Pydantic settings,
+This module defines the comprehensive application configuration using Pydantic settings,
 loading environment variables and providing type-safe access to configuration values.
+
+The configuration supports TowerBot's multi-layered authentication system including:
+- Basic Telegram group membership validation
+- Soulink social proximity authentication
+- BerlinHouse API integration
+- Comprehensive security and monitoring settings
+
+All settings are validated at startup and provide clear error messages for
+misconfiguration issues.
 """
 
 from dotenv import load_dotenv
@@ -11,34 +20,55 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 load_dotenv()
 
 class Settings(BaseSettings):
-    """Application settings configuration.
+    """Application settings configuration for TowerBot.
     
     This class defines all configuration parameters for the TowerBot application,
-    including API keys, database connections, and service endpoints. Settings are
-    loaded from environment variables with optional .env file support.
+    including API keys, database connections, service endpoints, and the comprehensive
+    multi-layered authentication system.
     
-    Attributes:
-        APP_ENV: Application environment (dev/prod)
-        AZURE_OPENAI_API_KEY: Azure OpenAI service API key
-        AZURE_OPENAI_ENDPOINT: Azure OpenAI service endpoint URL
-        BERLINHOUSE_EMAIL: Email for BerlinHouse API authentication
-        BERLINHOUSE_PASSWORD: Password for BerlinHouse API authentication
-        BOT_TOKEN: Telegram bot token
-        DEFAULT_DATABASE: Default database name
-        EMBEDDING_MODEL: Name of the embedding model to use
-        GROUP_ID: Telegram group ID for bot operations
-        LANGSMITH_API_KEY: LangSmith tracing API key
-        LANGSMITH_PROJECT: LangSmith project name
-        LANGSMITH_TRACING: Enable/disable LangSmith tracing
-        MODEL: Name of the main AI model to use
-        NEO4J_PASSWORD: Neo4j database password
-        NEO4J_URI: Neo4j database URI
-        NEO4J_USER: Neo4j database username
-        NOTION_API_KEY: Notion API key
-        PORT: Server port number
-        POSTGRES_CONN_STRING: Postgres connection string
-        RERANKER_MODEL: Name of the reranker model to use
-        WEBHOOK_URL: Webhook URL for external integrations
+    Authentication Configuration:
+        GROUP_ID: Primary Telegram group ID (required, must be numeric)
+        ALLOWED_GROUP_IDS: Comma-separated additional group IDs (optional)
+        SOULINK_ENABLED: Enable Soulink social proximity authentication (default: False)
+        SOULINK_ADMIN_ID: Admin user ID for Soulink validation (required if SOULINK_ENABLED=True)
+    
+    Service Configuration:
+        BOT_TOKEN: Telegram bot token (required)
+        WEBHOOK_URL: Webhook URL for Telegram updates (required)
+        AZURE_OPENAI_API_KEY: Azure OpenAI service API key (required)
+        AZURE_OPENAI_ENDPOINT: Azure OpenAI service endpoint URL (required)
+        
+    Database Configuration:
+        POSTGRES_CONN_STRING: PostgreSQL connection string (required)
+        NEO4J_URI: Neo4j database URI (required)
+        NEO4J_USER: Neo4j database username (required)
+        NEO4J_PASSWORD: Neo4j database password (required)
+        DEFAULT_DATABASE: Default database name (required)
+    
+    BerlinHouse API Configuration:
+        BERLINHOUSE_EMAIL: Email for BerlinHouse API authentication (required)
+        BERLINHOUSE_PASSWORD: Password for BerlinHouse API authentication (required)
+        
+    AI Model Configuration:
+        MODEL: Name of the main AI model to use (required)
+        EMBEDDING_MODEL: Name of the embedding model to use (required)
+        RERANKER_MODEL: Name of the reranker model to use (required)
+    
+    Monitoring & Analytics:
+        LANGSMITH_API_KEY: LangSmith tracing API key (required)
+        LANGSMITH_PROJECT: LangSmith project name (required)
+        LANGSMITH_TRACING: Enable/disable LangSmith tracing (default: True)
+    
+    Other Configuration:
+        APP_ENV: Application environment (default: "dev")
+        PORT: Server port number (default: 3000)
+        NOTION_API_KEY: Notion API key (required)
+        
+    Security Notes:
+        - All group IDs must be numeric Telegram group IDs (negative numbers)
+        - SOULINK_ADMIN_ID must be a positive integer if Soulink is enabled
+        - Invalid configurations will be logged and handled gracefully
+        - Bot will automatically leave unauthorized groups
     """
     APP_ENV: str = "dev"
     AZURE_OPENAI_API_KEY: str
@@ -49,6 +79,9 @@ class Settings(BaseSettings):
     DEFAULT_DATABASE: str
     EMBEDDING_MODEL: str
     GROUP_ID: str
+    ALLOWED_GROUP_IDS: str = ""
+    SOULINK_ENABLED: bool = False
+    SOULINK_ADMIN_ID: str = ""
     LANGSMITH_API_KEY: str
     LANGSMITH_PROJECT: str
     LANGSMITH_TRACING: bool = True
@@ -65,8 +98,30 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
 
 settings = Settings()
-"""Global settings instance for the application.
+"""Global settings instance for the TowerBot application.
 
 This is the main configuration object used throughout the application.
 It automatically loads values from environment variables and .env files.
+
+The settings instance provides:
+- Type-safe access to all configuration parameters
+- Automatic validation of required fields
+- Default values for optional parameters
+- Integration with TowerBot's multi-layered authentication system
+
+Usage:
+    from app.core.config import settings
+    
+    # Access authentication settings
+    if settings.SOULINK_ENABLED:
+        admin_id = settings.SOULINK_ADMIN_ID
+    
+    # Access service settings
+    bot_token = settings.BOT_TOKEN
+    webhook_url = settings.WEBHOOK_URL
+    
+Configuration files are loaded in this order:
+1. .env file (if present)
+2. Environment variables (override .env values)
+3. Default values (for optional parameters)
 """
