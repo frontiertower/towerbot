@@ -437,7 +437,7 @@ wheels = [
 
 [[package]]
 name = "graphiti-core"
-version = "0.17.4"
+version = "0.17.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "diskcache" },
@@ -449,9 +449,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/46/252e3e1451fedcae07199e38feee668e5aabacbc38a53c2603c137612089/graphiti_core-0.17.4.tar.gz", hash = "sha256:eb731fa4ca811b7e2e87ff7ccd4023e89483b4e8cb198b6ee6d033f202a032ce", size = 6463249, upload-time = "2025-07-15T15:51:55.623Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/29/5109a439cfa2b437b442e211a2ace362eb78a0eb7c9e7f9d84cd9a73cb39/graphiti_core-0.17.6.tar.gz", hash = "sha256:7677adad737a4c6d9ee91bae1537cd038da2e7e274ebe30a0690cc1e66063dc2", size = 6464099, upload-time = "2025-07-16T21:14:39.179Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/d0/e109292f4a7873be064c93a5293112cca598e80d0c892f15252ba7e0b2ae/graphiti_core-0.17.4-py3-none-any.whl", hash = "sha256:e9834e6bcf67890f372de72679f2736929371dd00cdf33aaa18d82bdd2dc25a2", size = 136762, upload-time = "2025-07-15T15:51:53.9Z" },
+    { url = "https://files.pythonhosted.org/packages/88/c9/24899e40475255e644ec6ab881ebe1c9b1fbaefcceb98fd63d9ea21284c3/graphiti_core-0.17.6-py3-none-any.whl", hash = "sha256:32990614348b4d476111a3e7fd53db3bf6de545c9ad82889807b8c8ee0917031", size = 137578, upload-time = "2025-07-16T21:14:37.252Z" },
 ]
 
 [[package]]
