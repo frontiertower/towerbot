@@ -730,7 +730,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if pending and pending["user_id"] == update.message.from_user.id:
             command = pending["command"]
             text_after_command = update.message.text.strip()
-            response = await ai_service.run(command, text_after_command, update.message.from_user.id)
+            if command == "ask":
+                response = await ai_service.handle_ask(text_after_command)
+            if command == "connect":
+                response = await ai_service.handle_connect(text_after_command)
             await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
             del pending_commands[replied_id]
             return
