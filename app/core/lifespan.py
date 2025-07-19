@@ -718,25 +718,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise
         return
 
-    if update.message.reply_to_message:
-        # Check if user is authorized for reply-based commands
-        if not await is_user_authorized(update.message.from_user.id, context):
-            logger.info(f"Ignoring reply from unauthorized user {safe_user_log(update.message.from_user.id)}")
-            return
-
-        pending_commands = context.application.bot_data.setdefault("pending_commands", {})
-        replied_id = update.message.reply_to_message.message_id
-        pending = pending_commands.get(replied_id)
-        if pending and pending["user_id"] == update.message.from_user.id:
-            command = pending["command"]
-            text_after_command = update.message.text.strip()
-            if command == "ask":
-                response = await ai_service.handle_ask(text_after_command)
-            if command == "connect":
-                response = await ai_service.handle_connect(text_after_command)
-            await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
-            del pending_commands[replied_id]
-            return
 
     if update.message.chat.type == "supergroup":
         # Verify this is an authorized supergroup
@@ -840,15 +821,11 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not text_after_command:
             example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
-            sent_message = await update.message.reply_text(
+            await update.message.reply_text(
                 f"Please add some context after your command. <b>Example:</b> /{command} {example}",
                 reply_to_message_id=update.message.message_id,
                 parse_mode="HTML"
             )
-            context.application.bot_data.setdefault("pending_commands", {})[sent_message.message_id] = {
-                "command": command,
-                "user_id": update.message.from_user.id,
-            }
             return
 
         if command == "ask":
