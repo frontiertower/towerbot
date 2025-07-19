@@ -95,7 +95,8 @@ class AiService:
         agent_executor = AgentExecutor(name="Ask", agent=agent, tools=tools)
 
         response = await agent_executor.ainvoke({
-                "input": message
+                "input": message,
+                "chat_history": []
             })
 
         return response.get("output")
@@ -116,7 +117,8 @@ class AiService:
         agent_executor = AgentExecutor(name="Connect", agent=agent, tools=tools)
 
         response = await agent_executor.ainvoke({
-                "input": message
+                "input": message,
+                "chat_history": []
             })
 
         return response.get("output")
