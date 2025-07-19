@@ -8,7 +8,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 
-from app.schemas.tools import NodeTypeEnum
+from app.schemas.generated_enums import NodeTypeEnum
 
 class SourceType(str, Enum):
     """Enumeration of data source types for question responses."""

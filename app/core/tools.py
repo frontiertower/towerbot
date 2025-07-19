@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from langchain_core.tools import tool
 from langchain_openai import AzureChatOpenAI
@@ -209,8 +209,8 @@ def get_tower_info():
 async def get_connections(
     query: str,
     recipe: Optional[SearchRecipeEnum] = None,
-    edge_types: Optional[List[EdgeTypeEnum]] = None,
-    node_labels: Optional[List[NodeTypeEnum]] = None,
+    edge_types: Optional[List[Union[str, EdgeTypeEnum]]] = None,
+    node_labels: Optional[List[Union[str, NodeTypeEnum]]] = None,
 ):
     """
     Searches the graph for connection opportunities based on a query, leveraging message context.
@@ -234,7 +234,6 @@ async def get_connections(
             edge_types=edge_types or [],
         )
 
-    # return await graphiti.search(query)
     return await graphiti.search_(
         query=query,
         config=search_config,

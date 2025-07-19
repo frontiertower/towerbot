@@ -36,15 +36,6 @@ class Message(BaseModel):
     class Config:
         label = "Message"
 
-class Task(BaseModel):
-    """A specific action or bounty that needs to be completed."""
-    title: str = Field(..., description="A short description of the task.")
-    status: str = Field("Open", description="The current status, e.g., 'Open', 'In-Progress', 'Completed'.")
-    reward: Optional[str] = Field(None, description="Any reward or points associated with the task.")
-
-    class Config:
-        label = "Task"
-
 class Floor(BaseModel):
     """A physical or logical floor within the Frontier Tower."""
     level: int = Field(..., description="Numeric floor level, e.g., 9 for ninth floor.")
@@ -57,12 +48,14 @@ class Floor(BaseModel):
 class Event(BaseModel):
     """A scheduled gathering or activity."""
     title: str = Field(..., description="Title or name of the event.")
+    luma_id: Optional[str] = Field(None, description="Luma ID of the event.")
+    url: Optional[str] = Field(None, description="URL of the event.")
     description: Optional[str] = Field(None, description="Detailed description of the event.")
-    start_time: Optional[str] = Field(
+    start_at: Optional[str] = Field(
         None,
         description="Start time of the event as an ISO 8601 string, e.g., '2024-06-01T10:00:00Z'."
     )
-    end_time: Optional[str] = Field(
+    end_at: Optional[str] = Field(
         None,
         description="End time of the event as an ISO 8601 string, e.g., '2024-06-01T12:00:00Z'."
     )
@@ -94,16 +87,22 @@ class Sent(BaseModel):
     """Sending relationship between a user and a message."""
     class Config:
         label = "SENT"
+        source_types = ["User"]
+        target_types = ["Message"]
 
 class SentIn(BaseModel):
     """Membership relationship between a message and a topic."""
     class Config:
         label = "SENT_IN"
+        source_types = ["Message"]
+        target_types = ["Topic"]
 
 class InReplyTo(BaseModel):
     """Reply relationship between a message and another message."""
     class Config:
         label = "IN_REPLY_TO"
+        source_types = ["Message"]
+        target_types = ["Message"]
 
 class LocatedOn(BaseModel):
     """Location relationship between an entity and a floor."""
@@ -115,6 +114,8 @@ class LocatedOn(BaseModel):
 
     class Config:
         label = "LOCATED_ON"
+        source_types = ["User", "Event", "Project"]
+        target_types = ["Floor"]
 
 class WorksOn(BaseModel):
     """Assignment relationship between a user and a project."""
@@ -126,16 +127,8 @@ class WorksOn(BaseModel):
 
     class Config:
         label = "WORKS_ON"
-
-class AssignedTo(BaseModel):
-    """Relationship linking a task to a user."""
-    assigned_at: Optional[str] = Field(
-        None,
-        description="ISO 8601 timestamp when the user was assigned to the task."
-    )
-
-    class Config:
-        label = "ASSIGNED_TO"
+        source_types = ["User"]
+        target_types = ["Project"]
 
 class Attends(BaseModel):
     """Attendance relationship between a user and an event."""
@@ -147,6 +140,8 @@ class Attends(BaseModel):
 
     class Config:
         label = "ATTENDS"
+        source_types = ["User"]
+        target_types = ["Event"]
 
 class InterestedIn(BaseModel):
     """Interest relationship between a user and an area of interest or event."""
@@ -157,6 +152,8 @@ class InterestedIn(BaseModel):
 
     class Config:
         label = "INTERESTED_IN"
+        source_types = ["User"]
+        target_types = ["Interest"]
 
 class RelatedTo(BaseModel):
     """General relationship between entities that are related."""
@@ -167,3 +164,5 @@ class RelatedTo(BaseModel):
     
     class Config:
         label = "RELATED_TO"
+        source_types = ["Project", "Event"]
+        target_types = ["Interest"]
