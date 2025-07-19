@@ -5,7 +5,7 @@ including node types, edge types, and search configuration options.
 """
 
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from app.schemas.generated_enums import NodeTypeEnum, EdgeTypeEnum
 
@@ -70,11 +70,11 @@ class SearchInputSchema(BaseModel):
             "- NODE_HYBRID_SEARCH_EPISODE_MENTIONS: Find entities relevant to a specific moment or conversation."
         )
     )
-    edge_types: Optional[List[EdgeTypeEnum]] = Field(
+    edge_types: Optional[List[Union[str, EdgeTypeEnum]]] = Field(
         default=None,
-        description="Array of edge types to filter by, e.g. ['WorksOn', 'Attends']"
+        description="Array of edge types to filter by, e.g. ['WORKS_ON', 'ATTENDS']. Accepts both enum values and string literals."
     )
-    node_labels: Optional[List[NodeTypeEnum]] = Field(
+    node_labels: Optional[List[Union[str, NodeTypeEnum]]] = Field(
         default=None,
-        description="Array of node types to filter by, e.g. ['User', 'Floor']"
+        description="Array of node types to filter by, e.g. ['User', 'Floor']. Accepts both enum values and string literals."
     )
