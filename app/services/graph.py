@@ -149,10 +149,10 @@ class GraphService:
         try:
             self.graphiti = get_graphiti_client()
             logger.info("Graph service connected to Graphiti")
+            await self.graphiti.build_indices_and_constraints()
             if settings.APP_ENV == "dev":
                 await clear_data(self.graphiti.driver)
-                await self.graphiti.build_indices_and_constraints()
-                logger.info("Development environment: Graph data cleared and indices rebuilt")
+                logger.info("Development environment: Graph data cleared")
         except Exception as e:
             logger.error(f"Failed to connect to graph service: {e}")
             raise
