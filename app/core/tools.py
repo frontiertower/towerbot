@@ -226,21 +226,20 @@ async def get_connections(
         search_config = COMBINED_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
 
     search_config.limit = 10
-    return await graphiti.search(query)
+    search_filter = None
 
-    # TODO: Improve search filtering
-    # search_filter = None
-    # if node_labels or edge_types:
-    #     search_filter = SearchFilters(
-    #         node_labels=node_labels or [],
-    #         edge_types=edge_types or [],
-    #     )
-    
-    # return await graphiti.search_(
-    #     query=query,
-    #     config=search_config,
-    #     search_filter=search_filter
-    # )
+    if node_labels or edge_types:
+        search_filter = SearchFilters(
+            node_labels=node_labels or [],
+            edge_types=edge_types or [],
+        )
+
+    # return await graphiti.search(query)
+    return await graphiti.search_(
+        query=query,
+        config=search_config,
+        search_filter=search_filter
+    )
 
 
 def get_qa_agent_tools(llm: AzureChatOpenAI):
