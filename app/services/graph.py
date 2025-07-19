@@ -21,6 +21,7 @@ from app.schemas.ontology import (
     User, Topic, Message, Sent, InReplyTo, SentIn, 
     Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, Floor, RelatedTo
 )
+from app.schemas.generated_enums import EDGE_TYPE_MAP, NodeTypeEnum, EdgeTypeEnum
 
 logger = logging.getLogger(__name__)
 
@@ -103,42 +104,29 @@ class GraphService:
     def __init__(self):
         """Initialize the GraphService with entity and edge type mappings."""
         self.graphiti: Graphiti | None = None
+        # Auto-generated entity type mappings from ontology
         self.entity_types = {
-            "User": User, 
-            "Topic": Topic,
-            "Message": Message,
-            "Event": Event, 
-            "Interest": Interest, 
-            "Project": Project,
-            "Floor": Floor
+            NodeTypeEnum.User.value: User,
+            NodeTypeEnum.Topic.value: Topic,
+            NodeTypeEnum.Message.value: Message,
+            NodeTypeEnum.Event.value: Event,
+            NodeTypeEnum.Interest.value: Interest,
+            NodeTypeEnum.Project.value: Project,
+            NodeTypeEnum.Floor.value: Floor
         }
+        # Auto-generated edge type mappings from ontology
         self.edge_types = {
-            "SENT": Sent,
-            "SENT_IN": SentIn,
-            "IN_REPLY_TO": InReplyTo,
-            "LOCATED_ON": LocatedOn,
-            "WORKS_ON": WorksOn,
-            "ATTENDS": Attends,
-            "INTERESTED_IN": InterestedIn,
-            "RELATED_TO": RelatedTo,
+            EdgeTypeEnum.Sent.value: Sent,
+            EdgeTypeEnum.SentIn.value: SentIn,
+            EdgeTypeEnum.InReplyTo.value: InReplyTo,
+            EdgeTypeEnum.LocatedOn.value: LocatedOn,
+            EdgeTypeEnum.WorksOn.value: WorksOn,
+            EdgeTypeEnum.Attends.value: Attends,
+            EdgeTypeEnum.InterestedIn.value: InterestedIn,
+            EdgeTypeEnum.RelatedTo.value: RelatedTo,
         }
-        self.edge_type_map = {
-            ("User", "Event"): ["ATTENDS"],
-            ("User", "Floor"): ["LOCATED_ON"],
-            ("User", "Interest"): ["INTERESTED_IN"],
-            ("User", "Project"): ["WORKS_ON"],
-            
-            ("User", "Message"): ["SENT"],
-            ("Message", "Topic"): ["SENT_IN"],
-            ("Message", "Message"): ["IN_REPLY_TO"],
-            
-            ("Event", "Floor"): ["LOCATED_ON"],
-            ("Project", "Floor"): ["LOCATED_ON"],
-            
-            ("Project", "Interest"): ["RELATED_TO"],
-            
-            ("Event", "Interest"): ["RELATED_TO"],
-        }
+        # Use auto-generated edge type mappings from ontology
+        self.edge_type_map = EDGE_TYPE_MAP
 
     async def connect(self):
         """Initialize the Graphiti client connection.

@@ -85,16 +85,22 @@ class Sent(BaseModel):
     """Sending relationship between a user and a message."""
     class Config:
         label = "SENT"
+        source_types = ["User"]
+        target_types = ["Message"]
 
 class SentIn(BaseModel):
     """Membership relationship between a message and a topic."""
     class Config:
         label = "SENT_IN"
+        source_types = ["Message"]
+        target_types = ["Topic"]
 
 class InReplyTo(BaseModel):
     """Reply relationship between a message and another message."""
     class Config:
         label = "IN_REPLY_TO"
+        source_types = ["Message"]
+        target_types = ["Message"]
 
 class LocatedOn(BaseModel):
     """Location relationship between an entity and a floor."""
@@ -106,6 +112,8 @@ class LocatedOn(BaseModel):
 
     class Config:
         label = "LOCATED_ON"
+        source_types = ["User", "Event", "Project"]
+        target_types = ["Floor"]
 
 class WorksOn(BaseModel):
     """Assignment relationship between a user and a project."""
@@ -117,6 +125,8 @@ class WorksOn(BaseModel):
 
     class Config:
         label = "WORKS_ON"
+        source_types = ["User"]
+        target_types = ["Project"]
 
 class Attends(BaseModel):
     """Attendance relationship between a user and an event."""
@@ -128,6 +138,8 @@ class Attends(BaseModel):
 
     class Config:
         label = "ATTENDS"
+        source_types = ["User"]
+        target_types = ["Event"]
 
 class InterestedIn(BaseModel):
     """Interest relationship between a user and an area of interest or event."""
@@ -138,6 +150,8 @@ class InterestedIn(BaseModel):
 
     class Config:
         label = "INTERESTED_IN"
+        source_types = ["User"]
+        target_types = ["Interest"]
 
 class RelatedTo(BaseModel):
     """General relationship between entities that are related."""
@@ -148,3 +162,5 @@ class RelatedTo(BaseModel):
     
     class Config:
         label = "RELATED_TO"
+        source_types = ["Project", "Event"]
+        target_types = ["Interest"]

@@ -26,3 +26,18 @@ class EdgeTypeEnum(str, Enum):
     Sent = "SENT"
     SentIn = "SENT_IN"
     WorksOn = "WORKS_ON"
+
+# Auto-generated edge type mappings from ontology relationship definitions
+EDGE_TYPE_MAP = {
+    ("Event", "Floor"): ["LOCATED_ON"],
+    ("Event", "Interest"): ["RELATED_TO"],
+    ("Message", "Message"): ["IN_REPLY_TO"],
+    ("Message", "Topic"): ["SENT_IN"],
+    ("Project", "Floor"): ["LOCATED_ON"],
+    ("Project", "Interest"): ["RELATED_TO"],
+    ("User", "Event"): ["ATTENDS"],
+    ("User", "Floor"): ["LOCATED_ON"],
+    ("User", "Interest"): ["INTERESTED_IN"],
+    ("User", "Message"): ["SENT"],
+    ("User", "Project"): ["WORKS_ON"],
+}

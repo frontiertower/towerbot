@@ -9,14 +9,15 @@ the ontology is updated to maintain consistency.
 import ast
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 
-def extract_ontology_types() -> Tuple[List[str], List[str]]:
-    """Extract node and edge types from ontology.py.
+def extract_ontology_types() -> Tuple[List[str], List[str], Dict[Tuple[str, str], List[str]]]:
+    """Extract node and edge types from ontology.py, plus relationship mappings.
     
     Returns:
-        Tuple of (node_types, edge_types) lists
+        Tuple of (node_types, edge_types, edge_type_map) where edge_type_map
+        maps (source_type, target_type) tuples to lists of valid edge types
     """
     # Get the path to ontology.py
     script_dir = Path(__file__).parent
@@ -31,6 +32,7 @@ def extract_ontology_types() -> Tuple[List[str], List[str]]:
     
     node_types = []
     edge_types = []
+    edge_type_map = {}
     
     # Walk through all class definitions
     for node in ast.walk(tree):
@@ -62,21 +64,45 @@ def extract_ontology_types() -> Tuple[List[str], List[str]]:
                                 
                                 if label.isupper() and '_' in label or class_name in relationship_classes:
                                     edge_types.append(label)
+                                    
+                                    # Extract relationship mappings for edge types
+                                    source_types = []
+                                    target_types = []
+                                    
+                                    for config_item in class_body_item.body:
+                                        if isinstance(config_item, ast.Assign):
+                                            if (len(config_item.targets) == 1 and
+                                                isinstance(config_item.targets[0], ast.Name)):
+                                                
+                                                attr_name = config_item.targets[0].id
+                                                if attr_name == "source_types" and isinstance(config_item.value, ast.List):
+                                                    source_types = [elt.value for elt in config_item.value.elts if isinstance(elt, ast.Constant)]
+                                                elif attr_name == "target_types" and isinstance(config_item.value, ast.List):
+                                                    target_types = [elt.value for elt in config_item.value.elts if isinstance(elt, ast.Constant)]
+                                    
+                                    # Create mappings for all source-target combinations
+                                    for source_type in source_types:
+                                        for target_type in target_types:
+                                            key = (source_type, target_type)
+                                            if key not in edge_type_map:
+                                                edge_type_map[key] = []
+                                            edge_type_map[key].append(label)
                                 else:
                                     node_types.append(label)
     
-    return sorted(node_types), sorted(edge_types)
+    return sorted(node_types), sorted(edge_types), edge_type_map
 
 
-def generate_enum_code(node_types: List[str], edge_types: List[str]) -> str:
-    """Generate the enum definitions code.
+def generate_enum_code(node_types: List[str], edge_types: List[str], edge_type_map: Dict[Tuple[str, str], List[str]]) -> str:
+    """Generate the enum definitions and relationship mappings code.
     
     Args:
         node_types: List of node type labels
         edge_types: List of edge type labels
+        edge_type_map: Dictionary mapping (source, target) pairs to edge types
         
     Returns:
-        Generated Python code for the enums
+        Generated Python code for the enums and mappings
     """
     code = '''"""Auto-generated enums from ontology definitions.
 
@@ -107,6 +133,17 @@ class EdgeTypeEnum(str, Enum):
         enum_name = ''.join(word.capitalize() for word in edge_type.split('_'))
         code += f'    {enum_name} = "{edge_type}"\n'
     
+    # Add the edge type mapping
+    code += '''\n# Auto-generated edge type mappings from ontology relationship definitions
+EDGE_TYPE_MAP = {
+'''
+    
+    for (source_type, target_type), edge_type_list in sorted(edge_type_map.items()):
+        edge_types_str = '[' + ', '.join(f'"{edge_type}"' for edge_type in sorted(edge_type_list)) + ']'
+        code += f'    ("{source_type}", "{target_type}"): {edge_types_str},\n'
+    
+    code += '}\n'
+    
     return code
 
 
@@ -114,13 +151,14 @@ def main():
     """Main function to generate the enums."""
     try:
         print("Extracting types from ontology.py...")
-        node_types, edge_types = extract_ontology_types()
+        node_types, edge_types, edge_type_map = extract_ontology_types()
         
         print(f"Found {len(node_types)} node types: {', '.join(node_types)}")
         print(f"Found {len(edge_types)} edge types: {', '.join(edge_types)}")
+        print(f"Found {len(edge_type_map)} relationship mappings")
         
         print("Generating enum code...")
-        enum_code = generate_enum_code(node_types, edge_types)
+        enum_code = generate_enum_code(node_types, edge_types, edge_type_map)
         
         # Write to generated file
         script_dir = Path(__file__).parent
