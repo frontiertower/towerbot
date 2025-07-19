@@ -7,7 +7,7 @@ including node types, edge types, and search configuration options.
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from .generated_enums import NodeTypeEnum, EdgeTypeEnum
+from app.schemas.generated_enums import NodeTypeEnum, EdgeTypeEnum
 
 # NodeTypeEnum and EdgeTypeEnum are now imported from generated_enums.py
 # Run 'python scripts/generate_enums.py' to regenerate them from ontology.py
