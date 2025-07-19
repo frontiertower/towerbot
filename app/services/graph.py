@@ -104,7 +104,6 @@ class GraphService:
     def __init__(self):
         """Initialize the GraphService with entity and edge type mappings."""
         self.graphiti: Graphiti | None = None
-        # Auto-generated entity type mappings from ontology
         self.entity_types = {
             NodeTypeEnum.User.value: User,
             NodeTypeEnum.Topic.value: Topic,
@@ -114,7 +113,6 @@ class GraphService:
             NodeTypeEnum.Project.value: Project,
             NodeTypeEnum.Floor.value: Floor
         }
-        # Auto-generated edge type mappings from ontology
         self.edge_types = {
             EdgeTypeEnum.Sent.value: Sent,
             EdgeTypeEnum.SentIn.value: SentIn,
@@ -125,7 +123,6 @@ class GraphService:
             EdgeTypeEnum.InterestedIn.value: InterestedIn,
             EdgeTypeEnum.RelatedTo.value: RelatedTo,
         }
-        # Use auto-generated edge type mappings from ontology
         self.edge_type_map = EDGE_TYPE_MAP
 
     async def connect(self):

@@ -71,6 +71,68 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 
 ---
 
+## 🔗 Dynamic Ontology System
+
+TowerBot implements a sophisticated ontology management system that automatically generates type definitions and relationship mappings from schema definitions. This eliminates hardcoded mappings and ensures compile-time safety as your knowledge graph evolves.
+
+### How It Works
+
+**1. Schema-First Design** (`app/schemas/ontology.py`)
+- Entity types (User, Project, Event, etc.) defined as Pydantic models
+- Relationship types (Sent, WorksOn, Attends, etc.) with metadata
+- Each relationship specifies valid source and target entity types
+
+**2. Automated Code Generation** (`scripts/generate_enums.py`)
+- Extracts entity and relationship types from ontology definitions
+- Generates `NodeTypeEnum` and `EdgeTypeEnum` automatically
+- Creates `EDGE_TYPE_MAP` with valid relationship mappings
+- Ensures zero drift between schema and application code
+
+**3. Dynamic Type System** (`app/schemas/tools.py`)
+- Search schemas accept both enum values and string literals
+- New ontology types work immediately without code changes
+- Maintains backward compatibility with existing functionality
+
+### Adding New Types
+
+To add new entity or relationship types:
+
+1. **Define in Ontology** (`app/schemas/ontology.py`):
+```python
+class NewEntity(BaseModel):
+    """A new entity type."""
+    title: str
+    
+    class Config:
+        label = "NewEntity"
+
+class NewRelationship(BaseModel):
+    """A new relationship type."""
+    class Config:
+        label = "NEW_RELATIONSHIP"
+        source_types = ["User"]
+        target_types = ["NewEntity"]
+```
+
+2. **Regenerate Types**:
+```bash
+python scripts/generate_enums.py
+```
+
+3. **Restart Application** - new types are automatically available
+
+### Benefits
+
+- **Zero Maintenance**: Relationship mappings update automatically
+- **Compile-Time Safety**: Invalid relationships caught during generation
+- **No Breaking Changes**: Existing functionality preserved
+- **Future-Proof**: Schema evolution doesn't require code changes
+- **Single Source of Truth**: Ontology defines both schemas and mappings
+
+This system ensures your knowledge graph schema and application code stay perfectly synchronized as your community data model evolves.
+
+---
+
 ## 🚀 Features
 
 - **AI Q&A:** `/ask <question>` in Telegram, get instant, context-aware answers
@@ -395,14 +457,17 @@ towerbot/
 │   │   └── tools.py           # AI agent tools and external API integrations
 │   ├── schemas/
 │   │   ├── ontology.py        # Graph database schema and entity definitions
+│   │   ├── generated_enums.py # Auto-generated enums and relationship mappings
 │   │   ├── responses.py       # Pydantic models for AI responses
-│   │   └── tools.py           # Tool parameter schemas and enums
+│   │   └── tools.py           # Tool parameter schemas with dynamic enum support
 │   ├── services/
 │   │   ├── ai.py              # Dynamic AI service with configurable agents
 │   │   ├── database.py        # Async database operations with connection pooling
 │   │   └── graph.py           # Neo4j graph service with Graphiti
 │   ├── main.py                # FastAPI application and endpoints
 │   └── webhook.py             # Telegram webhook configuration
+├── scripts/
+│   └── generate_enums.py      # Auto-generates enums from ontology definitions
 ├── static/
 │   └── json/
 │       └── tower.json         # Building and community data

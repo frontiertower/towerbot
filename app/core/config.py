@@ -134,11 +134,9 @@ The settings instance provides:
 Usage:
     from app.core.config import settings
     
-    # Access authentication settings
     if settings.SOULINK_ENABLED:
         admin_id = settings.SOULINK_ADMIN_ID
     
-    # Access service settings
     bot_token = settings.BOT_TOKEN
     webhook_url = settings.WEBHOOK_URL
     
