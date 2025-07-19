@@ -7,29 +7,10 @@ including node types, edge types, and search configuration options.
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from .generated_enums import NodeTypeEnum, EdgeTypeEnum
 
-class NodeTypeEnum(str, Enum):
-    """Enumeration of node types in the knowledge graph."""
-    User = "User"
-    Topic = "Topic"
-    Message = "Message"
-    Task = "Task"
-    Floor = "Floor"
-    Event = "Event"
-    Interest = "Interest"
-    Project = "Project"
-
-class EdgeTypeEnum(str, Enum):
-    """Enumeration of edge types in the knowledge graph."""
-    Sent = "SENT"
-    SentIn = "SENT_IN"
-    InReplyTo = "IN_REPLY_TO"
-    LocatedOn = "LOCATED_ON"
-    WorksOn = "WORKS_ON"
-    AssignedTo = "ASSIGNED_TO"
-    Attends = "ATTENDS"
-    InterestedIn = "INTERESTED_IN"
-    RelatedTo = "RELATED_TO"
+# NodeTypeEnum and EdgeTypeEnum are now imported from generated_enums.py
+# Run 'python scripts/generate_enums.py' to regenerate them from ontology.py
 
 class SearchRecipeEnum(str, Enum):
     """Enumeration of available search recipes for graph queries.

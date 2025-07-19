@@ -2,3 +2,4 @@
 **/*.pyc
 .venv/
 .supabase/
+app/schemas/generated_enums.py
