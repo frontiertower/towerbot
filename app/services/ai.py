@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 class AiService:
     def __init__(self):
-        self.towerbot = None
+        self.bot = None
         self.client = Client()
         self.llm: Optional[AzureChatOpenAI] = None
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
 
     def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
         self.llm = llm
-        self.towerbot = create_react_agent(
+        self.bot = create_react_agent(
             name="TowerBot",
             model=self.llm,
             tools=[
@@ -94,7 +94,7 @@ class AiService:
             }
         }
 
-        response = await self.towerbot.ainvoke(
+        response = await self.bot.ainvoke(
             {"messages": messages},
             config=config
         )
