@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 class AiService:
     def __init__(self):
-        self.agent = None
+        self.towerbot = None
         self.client = Client()
         self.llm: Optional[AzureChatOpenAI] = None
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
 
     def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
         self.llm = llm
-        self.agent = create_react_agent(
+        self.towerbot = create_react_agent(
             name="TowerBot",
             model=self.llm,
             tools=[
@@ -52,43 +52,51 @@ class AiService:
         }
         return thread_id
     
-    async def _handle_ask_command(self, message: str):
+    async def handle_ask(self, message: str):
         tools = get_qa_agent_tools(self.llm)
-        prompt = self.client.pull_prompt("hwchase17/openai-tools-agent")
+        prompt = self.client.pull_prompt("towerbot-ask")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        agent_executor = AgentExecutor(name="Ask", agent=agent, tools=tools)
 
         response = await agent_executor.ainvoke({
                 "input": message
             })
+
+        return response.get("output")
+    
+    async def handle_connect(self, message: str):
+        tools = get_connect_agent_tools()
+        prompt = self.client.pull_prompt("towerbot-connect")
+
+        agent = create_tool_calling_agent(self.llm, tools, prompt)
+        agent_executor = AgentExecutor(name="Connect", agent=agent, tools=tools)
+
+        response = await agent_executor.ainvoke({
+                "input": message
+            })
+
         return response.get("output")
 
-    async def run(self, command: str, message: str, user_id: int):
-        if command == "ask":
-            return await self._handle_ask_command(message)
+    async def agent(self, message: str, user_id: int):
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
+            {"role": "user", "content": message}
+        ]
 
-        if not command or command.strip() == "":
-            command = "direct"
+        thread_id = self._get_or_create_session(user_id, "direct")
 
-            messages = [
-                {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
-                {"role": "user", "content": message}
-            ]
-
-            thread_id = self._get_or_create_session(user_id, command)
-
-            config = {
-                'recursion_limit': 50,
-                "configurable": {
-                    "user_id": str(user_id),
-                    "thread_id": thread_id
-                }
+        config = {
+            'recursion_limit': 50,
+            "configurable": {
+                "user_id": str(user_id),
+                "thread_id": thread_id
             }
+        }
 
-            response = await self.agent.ainvoke(
-                {"messages": messages},
-                config=config
-            )
+        response = await self.towerbot.ainvoke(
+            {"messages": messages},
+            config=config
+        )
 
-            return response["messages"][-1].content
+        return response["messages"][-1].content

@@ -709,7 +709,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Process direct message using memory agent (no command)
         try:
             logger.debug(f"Processing direct message for user {safe_user_log(update.message.from_user.id)}")
-            response = await ai_service.run(None, update.message.text, update.message.from_user.id)
+            response = await ai_service.agent(update.message.text, update.message.from_user.id)
             await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
             logger.debug(f"Successfully processed direct message for user {safe_user_log(update.message.from_user.id)}")
         except Exception as e:
@@ -848,7 +848,11 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }
             return
 
-        response = await ai_service.run(command, text_after_command, update.message.from_user.id)
+        if command == "ask":
+            response = await ai_service.handle_ask(text_after_command)
+        if command == "connect":
+            response = await ai_service.handle_connect(text_after_command)
+
         await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
         logger.debug(f"Successfully processed command '{command}' from user {safe_user_log(update.message.from_user.id)}")
     except Exception as e:
