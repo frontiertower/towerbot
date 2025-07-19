@@ -5,7 +5,7 @@
 [![Project Status](https://img.shields.io/badge/status-active-brightgreen)](https://github.com/frontiertower/towerbot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-TowerBot is an open source, AI-powered Telegram assistant for Frontier Tower citizen. It answers questions, provides insights, and leverages persistent memory, semantic search, and a temporal knowledge graph to empower your Telegram community.
+TowerBot is an open source, AI-powered Telegram assistant for Frontier Tower citizens. It answers questions, provides insights, and leverages persistent memory, semantic search, and a temporal knowledge graph to empower your Telegram community.
 
 **This project is licensed under the [MIT License](LICENSE) and is free for both commercial and non-commercial use.**
 
@@ -510,6 +510,7 @@ TowerBot integrates with LangSmith for comprehensive LLM observability and traci
 - **Tool Usage Monitoring:** Monitor how agents use tools and external APIs
 
 **Configuration:**
+
 ```env
 LANGSMITH_API_KEY=your-langsmith-api-key
 LANGSMITH_PROJECT=your-project-name
