@@ -234,6 +234,7 @@ async def get_connections(
             edge_types=edge_types or [],
         )
 
+    # return await graphiti.search(query)
     return await graphiti.search_(
         query=query,
         config=search_config,
