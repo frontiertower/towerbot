@@ -213,17 +213,20 @@ async def get_connections(
     node_labels: Optional[List[NodeTypeEnum]] = None,
 ):
     """
-    Dynamically searches the graph based on a query, optional filters, and a search recipe.
-    This tool uses the low-level search method to allow for configurable strategies.
+    Searches the graph for connection opportunities based on a query, leveraging message context.
+    
+    Uses combined hybrid search with cross-encoder by default to capture context from messages
+    and episodes, providing better hit rates for finding relevant connections between people.
     """
     graphiti = get_graphiti_client()
     
     if recipe and recipe in SEARCH_RECIPE_MAP:
         search_config = SEARCH_RECIPE_MAP[recipe].model_copy(deep=True)
     else:
-        search_config = NODE_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
+        # Use combined search with cross-encoder to capture message context from episodes
+        search_config = COMBINED_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
 
-    search_config.limit = 5
+    search_config.limit = 10
 
     search_filter = None
     if node_labels or edge_types:
