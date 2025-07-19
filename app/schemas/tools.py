@@ -11,6 +11,9 @@ from pydantic import BaseModel, Field
 class NodeTypeEnum(str, Enum):
     """Enumeration of node types in the knowledge graph."""
     User = "User"
+    Topic = "Topic"
+    Message = "Message"
+    Task = "Task"
     Floor = "Floor"
     Event = "Event"
     Interest = "Interest"
@@ -18,10 +21,15 @@ class NodeTypeEnum(str, Enum):
 
 class EdgeTypeEnum(str, Enum):
     """Enumeration of edge types in the knowledge graph."""
-    WorksOn = "WorksOn"
-    Attends = "Attends"
-    LocatedOn = "LocatedOn"
-    InterestedIn = "InterestedIn"
+    Sent = "SENT"
+    SentIn = "SENT_IN"
+    InReplyTo = "IN_REPLY_TO"
+    LocatedOn = "LOCATED_ON"
+    WorksOn = "WORKS_ON"
+    AssignedTo = "ASSIGNED_TO"
+    Attends = "ATTENDS"
+    InterestedIn = "INTERESTED_IN"
+    RelatedTo = "RELATED_TO"
 
 class SearchRecipeEnum(str, Enum):
     """Enumeration of available search recipes for graph queries.
