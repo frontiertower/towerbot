@@ -896,6 +896,7 @@ async def lifespan(app: FastAPI):
         pool = AsyncConnectionPool(
             conninfo=settings.POSTGRES_CONN_STRING,
             max_size=20,
+            open=False,
             kwargs=connection_kwargs,
         )
         
