@@ -74,8 +74,6 @@ For more on Graphiti, see: [Graphiti: A Python Library for Building Temporal Kno
 ## 🚀 Features
 
 - **AI Q&A:** `/ask <question>` in Telegram, get instant, context-aware answers
-- **Problem Reporting:** `/report <problem>` to report issues or requests (e.g., facilities, supplies)
-- **Idea Proposals:** `/propose <idea>` to propose new ideas or initiatives for the community
 - **Community Connections:** `/connect <interest>` to find people, projects, or resources
 - **Direct Messages:** Private conversations with memory agent for personalized interactions
 - **Dynamic Agent System:** Specialized AI agents for different tasks with configurable tools
@@ -104,10 +102,6 @@ TowerBot responds to the following commands in your Telegram group and handles d
 
 - `/ask <question>` — Get answers to questions about the building, community, or general topics.  
   _Example:_ `/ask what's the wifi password?`
-- `/report <problem>` — Report a problem or submit a maintenance request.  
-  _Example:_ `/report we need more toilet paper on the 9th floor`
-- `/propose <idea>` — Propose a new idea or initiative for the community.  
-  _Example:_ `/propose let's organize a community garden on the rooftop`
 - `/connect <interest>` — Find people, projects, or resources related to a topic.  
   _Example:_ `/connect who can help me learn more about biotech?`
 - `/start` — Get an introduction message with bot capabilities
@@ -121,7 +115,7 @@ TowerBot responds to the following commands in your Telegram group and handles d
 
 ### Available Tools
 
-**Command Agents (Ask, Report, Propose, Connect):**
+**Command Agents (Ask, Connect):**
 
 - **Tower Information:** Access building details, amenities, and floor plans
 - **Calendar Events:** Get upcoming events from the community calendar
@@ -138,11 +132,10 @@ TowerBot responds to the following commands in your Telegram group and handles d
 
 - **Group Messages:** All messages processed for entity extraction and graph building
 - **Private Messages:** Direct processing with memory agent for conversational interactions
-- **Reply-based Continuation:** Command continuation for complex queries
 - **Session Management:** Conversation continuity across interactions
 - **Authentication:** Full three-tier validation for all private conversations
 
-If you use a command without context, TowerBot will prompt you for more information with an example.
+If you use a command without context, TowerBot will prompt you for more information with an example. Commands must include context in the initial message - no reply-based continuation.
 
 ---
 
@@ -174,7 +167,6 @@ TowerBot implements a comprehensive three-tier authentication system to ensure s
 - **Commands:** Full three-tier authentication for all bot commands
 - **Direct Messages:** Complete authentication before allowing private conversations
 - **Group Messages:** Group-level validation for knowledge graph processing
-- **Reply Continuation:** Authentication maintained for multi-turn conversations
 
 ### Soulink: How It Works
 
@@ -228,13 +220,11 @@ SOULINK_ADMIN_ID=123456789  # Your Telegram user ID
 
 ```mermaid
 graph TD;
-  TG["Telegram Group"] -->|/ask, /report, /propose, /connect| BOT["TowerBot (python-telegram-bot)"]
+  TG["Telegram Group"] -->|/ask, /connect| BOT["TowerBot (python-telegram-bot)"]
   PM["Private Messages"] -->|Direct Messages| BOT
   BOT --> API["FastAPI Backend"]
   API --> AI["Dynamic AI Agents"]
   AI --> AG["Ask Agent<br/>QA Tools + Memory"]
-  AI --> RP["Report Agent<br/>QA Tools + Memory"]
-  AI --> PP["Propose Agent<br/>QA Tools + Memory"]
   AI --> CN["Connect Agent<br/>Graph Tools + Memory"]
   AI --> MM["Memory Agent<br/>Memory Tools Only"]
   API --> DB["Supabase (Vectors)"]
@@ -328,7 +318,7 @@ The Telegram bot will start automatically as a background task.
 ### 4. Add to Telegram Group
 
 - Add your bot to a Telegram group.
-- Use `/ask`, `/report`, `/propose`, or `/connect` to interact with the bot.
+- Use `/ask` or `/connect` to interact with the bot.
 - Send direct messages in private chats for conversational AI interactions.
 
 ---
@@ -436,7 +426,7 @@ towerbot/
 **Agent Architecture:**
 
 - **AgentConfig:** Configuration class for dynamic agent creation
-- **Specialized Agents:** Ask, Report, Propose, Connect, and Memory agents
+- **Specialized Agents:** Ask, Connect, and Memory agents
 - **Tool Integration:** Each agent has access to relevant tools and memory
 - **Session Management:** Conversation continuity across all interaction types
 

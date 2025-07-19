@@ -22,8 +22,8 @@ Authentication Flow:
 Message Processing:
 - Private Chats: Direct message processing using memory agent with full authentication
 - Supergroups: Knowledge graph extraction for authorized groups
-- Commands: AI-powered responses with specialized tools (/ask, /report, /propose, /connect)
-- Replies: Command continuation with conversation context
+- Commands: AI-powered responses with specialized tools (/ask, /connect)
+- Commands require immediate context - no reply-based continuation
 
 Soulink Authentication System:
 Soulink is TowerBot's innovative "social proximity" authentication mechanism that creates
@@ -470,13 +470,11 @@ def create_application(
     
     Handlers Configured:
     - /start: Introduction with full authentication
-    - /ask, /report, /propose, /connect: AI-powered commands with authentication
-    - /debug: Chat information display
+    - /ask, /connect: AI-powered commands with authentication
     - Chat member updates: Automatic group management
     - Text messages: Context-aware processing with security checks
       * Private chats: Direct message processing using memory agent
       * Supergroups: Knowledge graph extraction
-      * Replies: Command continuation with conversation context
     
     Args:
         ai_service: AI service instance for processing commands and responses
@@ -640,7 +638,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Processes text messages based on chat type with appropriate security measures:
     - Private chats: Full three-tier authentication + direct message processing with memory agent
     - Supergroups: Group authorization + knowledge graph extraction
-    - Reply handling: Authentication + command continuation
     
     Private Chat Processing:
     1. Group membership validation
@@ -653,10 +650,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     2. Message processing for knowledge graph extraction
     3. No individual user authentication required
     
-    Reply Processing:
-    1. Full authentication for pending command responses
-    2. Command continuation with AI service
-    3. Result persistence and cleanup
     
     Args:
         update: Telegram update containing the text message
@@ -666,7 +659,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         - Different authentication levels per chat type
         - Automatic unauthorized group filtering
         - Comprehensive audit logging
-        - Secure handling of command continuations
         - Input validation and sanitization
     """
     logger.debug(f"Full update: {safe_update_log(update)}")
@@ -754,13 +746,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle bot commands with comprehensive authentication and AI processing.
     
-    Processes TowerBot's AI-powered commands (/ask, /report, /propose, /connect)
+    Processes TowerBot's AI-powered commands (/ask, /connect)
     with full three-tier authentication and intelligent response generation.
     
     Supported Commands:
     - /ask: General questions and information requests
-    - /report: Community reports and observations
-    - /propose: Suggestions and proposals for the community
     - /connect: Connection requests and networking
     
     Authentication Process:
@@ -772,8 +762,7 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     1. Extracts command type and context from message
     2. Validates command has context (prompts with example if empty)
     3. Routes to AI service for intelligent response generation
-    4. Persists command and response for knowledge graph building
-    5. Handles pending commands for multi-turn conversations
+    4. Commands must include context in the initial message - no multi-turn continuation
     
     Args:
         update: Telegram update containing the bot command
