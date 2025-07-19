@@ -13,13 +13,11 @@ class NodeTypeEnum(str, Enum):
     Interest = "Interest"
     Message = "Message"
     Project = "Project"
-    Task = "Task"
     Topic = "Topic"
     User = "User"
 
 class EdgeTypeEnum(str, Enum):
     """Enumeration of edge types in the knowledge graph."""
-    AssignedTo = "ASSIGNED_TO"
     Attends = "ATTENDS"
     InterestedIn = "INTERESTED_IN"
     InReplyTo = "IN_REPLY_TO"

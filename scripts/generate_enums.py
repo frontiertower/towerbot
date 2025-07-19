@@ -57,7 +57,7 @@ def extract_ontology_types() -> Tuple[List[str], List[str]]:
                                 # Also check if it's a known relationship class
                                 relationship_classes = {
                                     'Sent', 'SentIn', 'InReplyTo', 'LocatedOn', 'WorksOn', 
-                                    'Attends', 'InterestedIn', 'AssignedTo', 'RelatedTo'
+                                    'Attends', 'InterestedIn', 'RelatedTo'
                                 }
                                 
                                 if label.isupper() and '_' in label or class_name in relationship_classes:

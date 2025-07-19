@@ -36,15 +36,6 @@ class Message(BaseModel):
     class Config:
         label = "Message"
 
-class Task(BaseModel):
-    """A specific action or bounty that needs to be completed."""
-    title: str = Field(..., description="A short description of the task.")
-    status: str = Field("Open", description="The current status, e.g., 'Open', 'In-Progress', 'Completed'.")
-    reward: Optional[str] = Field(None, description="Any reward or points associated with the task.")
-
-    class Config:
-        label = "Task"
-
 class Floor(BaseModel):
     """A physical or logical floor within the Frontier Tower."""
     level: int = Field(..., description="Numeric floor level, e.g., 9 for ninth floor.")
@@ -126,16 +117,6 @@ class WorksOn(BaseModel):
 
     class Config:
         label = "WORKS_ON"
-
-class AssignedTo(BaseModel):
-    """Relationship linking a task to a user."""
-    assigned_at: Optional[str] = Field(
-        None,
-        description="ISO 8601 timestamp when the user was assigned to the task."
-    )
-
-    class Config:
-        label = "ASSIGNED_TO"
 
 class Attends(BaseModel):
     """Attendance relationship between a user and an event."""

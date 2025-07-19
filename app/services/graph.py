@@ -19,7 +19,7 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 from app.core.config import settings
 from app.schemas.ontology import (
     User, Topic, Message, Sent, InReplyTo, SentIn, 
-    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, AssignedTo, Task, Floor, RelatedTo
+    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, Floor, RelatedTo
 )
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,6 @@ class GraphService:
             "Event": Event, 
             "Interest": Interest, 
             "Project": Project,
-            "Task": Task,
             "Floor": Floor
         }
         self.edge_types = {
@@ -121,7 +120,6 @@ class GraphService:
             "WORKS_ON": WorksOn,
             "ATTENDS": Attends,
             "INTERESTED_IN": InterestedIn,
-            "ASSIGNED_TO": AssignedTo,
             "RELATED_TO": RelatedTo,
         }
         self.edge_type_map = {
@@ -129,7 +127,6 @@ class GraphService:
             ("User", "Floor"): ["LOCATED_ON"],
             ("User", "Interest"): ["INTERESTED_IN"],
             ("User", "Project"): ["WORKS_ON"],
-            ("User", "Task"): ["ASSIGNED_TO"],
             
             ("User", "Message"): ["SENT"],
             ("Message", "Topic"): ["SENT_IN"],
@@ -138,7 +135,6 @@ class GraphService:
             ("Event", "Floor"): ["LOCATED_ON"],
             ("Project", "Floor"): ["LOCATED_ON"],
             
-            ("Task", "Project"): ["RELATED_TO"],
             ("Project", "Interest"): ["RELATED_TO"],
             
             ("Event", "Interest"): ["RELATED_TO"],
