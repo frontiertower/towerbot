@@ -9,9 +9,6 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.schemas.generated_enums import NodeTypeEnum, EdgeTypeEnum
 
-# NodeTypeEnum and EdgeTypeEnum are now imported from generated_enums.py
-# Run 'python scripts/generate_enums.py' to regenerate them from ontology.py
-
 class SearchRecipeEnum(str, Enum):
     """Enumeration of available search recipes for graph queries.
     
