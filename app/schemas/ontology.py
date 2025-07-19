@@ -48,12 +48,14 @@ class Floor(BaseModel):
 class Event(BaseModel):
     """A scheduled gathering or activity."""
     title: str = Field(..., description="Title or name of the event.")
+    luma_id: Optional[str] = Field(None, description="Luma ID of the event.")
+    url: Optional[str] = Field(None, description="URL of the event.")
     description: Optional[str] = Field(None, description="Detailed description of the event.")
-    start_time: Optional[str] = Field(
+    start_at: Optional[str] = Field(
         None,
         description="Start time of the event as an ISO 8601 string, e.g., '2024-06-01T10:00:00Z'."
     )
-    end_time: Optional[str] = Field(
+    end_at: Optional[str] = Field(
         None,
         description="End time of the event as an ISO 8601 string, e.g., '2024-06-01T12:00:00Z'."
     )
