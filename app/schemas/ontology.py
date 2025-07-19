@@ -13,6 +13,7 @@ class User(BaseModel):
     username: Optional[str] = Field(None, description="The user's username, if available.")
     first_name: str = Field(..., description="The user's first name, if available.")
     last_name: Optional[str] = Field(None, description="The user's last name, if available.")
+    nickname: Optional[str] = Field(None, description="The user's nickname, if available.")
     floor: Optional[int] = Field(None, description="The level of the floor this user is a member of, if any.")
     bio: Optional[str] = Field(None, description="A short biography or summary of the user's interests and background.")
 

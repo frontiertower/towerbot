@@ -164,182 +164,12 @@ class GraphService:
             except Exception as e:
                 logger.error(f"Failed to build graph communities: {e}")
 
-    async def process_telegram_message(self, message: TelegramMessage):
-        """Process a Telegram message for knowledge graph integration.
-        
-        Handles both structured message storage and entity extraction
-        from the message content.
-        
-        Args:
-            message: Telegram message object to process
-        """
-        try:
-            logger.debug(f"Processing message {message.message_id} for graph integration")
-            await self._store_message_context(message)
-            await self._add_episode(message)
-            logger.debug(f"Successfully processed message {message.message_id}")
-        except Exception as e:
-            logger.error(f"Failed to process message {message.message_id}: {e}")
-            raise
-
-    async def check_user_exists(self, message: TelegramMessage):
-        """Check if a user exists in the knowledge graph.
-        
-        Args:
-            message: Telegram message containing user information
-            
-        Returns:
-            bool: True if user exists in the graph, False otherwise
-        """
-        user_id = message.from_user.id
-        cypher = """
-        MATCH (n:User {user_id: $user_id})
-        RETURN n.user_id
-        LIMIT 1
-        """
-        result = await self.graphiti.driver.execute_query(
-            cypher,
-            user_id=user_id
-        )
-
-        records = getattr(result, "records", None)
-        if records is not None:
-            return len(records) > 0
-        return bool(result)
-
-    async def _store_message_context(self, message: TelegramMessage):
-        """Add structured message data to the knowledge graph.
-        
-        Creates or updates User, Topic, and Message nodes and establishes
-        relationships between them based on the Telegram message structure.
-        
-        Args:
-            message: Telegram message to process and store
-        """
-        user_info = message.from_user
-        user_id = user_info.id
-        user_node = None
-
-        cypher = "MATCH (n:User {user_id: $user_id}) RETURN n"
-        result = await self.graphiti.driver.execute_query(cypher, user_id=user_id)
-
-        if result and isinstance(result[0], dict) and 'n' in result[0]:
-            user_node = User(**result[0]['n'])
-        else:
-            user_node = User(
-                user_id=user_id,
-                username=getattr(user_info, "username", None),
-                first_name=user_info.first_name,
-                last_name=getattr(user_info, "last_name", None)
-            )
-            cypher = """
-            MERGE (n:User {user_id: $user_id})
-            SET n += $props
-            RETURN n
-            """
-            await self.graphiti.driver.execute_query(
-                cypher,
-                user_id=user_node.user_id,
-                props=user_node.model_dump()
-            )
-
-        topic_id = message.message_thread_id
-        topic_name = "General"
-
-        if message.reply_to_message and message.reply_to_message.forum_topic_created:
-            topic_name = message.reply_to_message.forum_topic_created.name
-        if not topic_id:
-            topic_id = message.chat.id
-        
-        topic_node = None
-        cypher = "MATCH (n:Topic {topic_id: $topic_id}) RETURN n"
-        result = await self.graphiti.driver.execute_query(cypher, topic_id=topic_id)
-
-        if result and isinstance(result[0], dict) and 'n' in result[0]:
-            topic_node = Topic(**result[0]['n'])
-        else:
-            topic_node = Topic(topic_id=topic_id, title=topic_name)
-            cypher = """
-            MERGE (n:Topic {topic_id: $topic_id})
-            SET n += $props
-            RETURN n
-            """
-            await self.graphiti.driver.execute_query(
-                cypher,
-                topic_id=topic_node.topic_id,
-                props=topic_node.model_dump()
-            )
-
-        iso_timestamp = message.date.astimezone(timezone.utc).isoformat()
-        message_node = Message(
-            message_id=message.message_id,
-            text=message.text or "",
-            timestamp=iso_timestamp
-        )
-        cypher = """
-        MERGE (n:Message {message_id: $message_id})
-        SET n += $props
-        RETURN n
-        """
-        await self.graphiti.driver.execute_query(
-            cypher,
-            message_id=message_node.message_id,
-            props=message_node.model_dump()
-        )
-
-        await self._add_edge("SENT", user_node.user_id, message_node.message_id, "User", "Message")
-        await self._add_edge("SENT_IN", message_node.message_id, topic_node.topic_id, "Message", "Topic")
-
-        if message.reply_to_message and not message.reply_to_message.forum_topic_created:
-            parent_message_id = message.reply_to_message.message_id
-            await self._add_edge("IN_REPLY_TO", message_node.message_id, parent_message_id, "Message", "Message")
-
-    async def _add_edge(
-        self,
-        edge_type: str,
-        from_id: int,
-        to_id: int,
-        from_label: str,
-        to_label: str
-    ):
-        """Add an edge relationship between two nodes in the graph.
-
-        This method uses MERGE to idempotently create the nodes and the relationship,
-        preventing errors if a node does not yet exist.
-
-        Args:
-            edge_type: Type of edge to create (e.g., 'SENT', 'IN_REPLY_TO')
-            from_id: ID of the source node
-            to_id: ID of the target node
-            from_label: Label of the source node type
-            to_label: Label of the target node type
-        """
-        id_fields = {
-            "User": "user_id",
-            "Message": "message_id",
-            "Topic": "topic_id"
-        }
-        from_id_field = id_fields.get(from_label, "id")
-        to_id_field = id_fields.get(to_label, "id")
-
-        cypher = f"""
-        MERGE (a:{from_label} {{{from_id_field}: $from_id}})
-        MERGE (b:{to_label} {{{to_id_field}: $to_id}})
-        MERGE (a)-[r:{edge_type}]->(b)
-        RETURN r
-        """
-        await self.graphiti.driver.execute_query(
-            cypher,
-            from_id=from_id,
-            to_id=to_id
-        )
-
-    async def _add_episode(self, message: TelegramMessage):
+    async def process_message(self, message: TelegramMessage):
         """Add a new episode to the knowledge graph for a Telegram message.
 
         This method creates an episode in the knowledge graph representing the provided
         Telegram message, extracting and storing relevant entities and relationships
-        (excluding User, Topic, and Message types) using Graphiti's processing.
+        (excluding Topic and Floor types) using Graphiti's processing.
 
         Args:
             message: The Telegram message to be represented as an episode in the graph.
@@ -352,7 +182,7 @@ class GraphService:
             reference_time=message.date.astimezone(timezone.utc),
             group_id=settings.GROUP_ID,
             entity_types=self.entity_types,
-            excluded_entity_types=["User", "Topic", "Message", "Floor"],
+            excluded_entity_types=["Topic", "Floor"],
             edge_types=self.edge_types,
             edge_type_map=self.edge_type_map,
             update_communities=True,

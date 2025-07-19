@@ -698,7 +698,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         logger.debug(f"Processing supergroup message from authorized group {chat_id}")
-        await graph_service.process_telegram_message(update.message)
+        await graph_service.process_message(update.message)
         return
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
