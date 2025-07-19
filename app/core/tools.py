@@ -223,23 +223,24 @@ async def get_connections(
     if recipe and recipe in SEARCH_RECIPE_MAP:
         search_config = SEARCH_RECIPE_MAP[recipe].model_copy(deep=True)
     else:
-        # Use combined search with cross-encoder to capture message context from episodes
         search_config = COMBINED_HYBRID_SEARCH_CROSS_ENCODER.model_copy(deep=True)
 
     search_config.limit = 10
+    return await graphiti.search(query)
 
-    search_filter = None
-    if node_labels or edge_types:
-        search_filter = SearchFilters(
-            node_labels=node_labels or [],
-            edge_types=edge_types or [],
-        )
+    # TODO: Improve search filtering
+    # search_filter = None
+    # if node_labels or edge_types:
+    #     search_filter = SearchFilters(
+    #         node_labels=node_labels or [],
+    #         edge_types=edge_types or [],
+    #     )
     
-    return await graphiti.search_(
-        query=query,
-        config=search_config,
-        search_filter=search_filter
-    )
+    # return await graphiti.search_(
+    #     query=query,
+    #     config=search_config,
+    #     search_filter=search_filter
+    # )
 
 
 def get_qa_agent_tools(llm: AzureChatOpenAI):
