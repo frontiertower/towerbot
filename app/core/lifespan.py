@@ -22,8 +22,8 @@ Authentication Flow:
 Message Processing:
 - Private Chats: Direct message processing using memory agent with full authentication
 - Supergroups: Knowledge graph extraction for authorized groups
-- Commands: AI-powered responses with specialized tools (/ask, /report, /propose, /connect)
-- Replies: Command continuation with conversation context
+- Commands: AI-powered responses with specialized tools (/ask, /connect)
+- Commands require immediate context - no reply-based continuation
 
 Soulink Authentication System:
 Soulink is TowerBot's innovative "social proximity" authentication mechanism that creates
@@ -167,7 +167,6 @@ async def is_user_authorized(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
     logger.debug(f"GROUP_ID={settings.GROUP_ID}, ALLOWED_GROUP_IDS={settings.ALLOWED_GROUP_IDS}")
     logger.debug(f"SOULINK_ENABLED={settings.SOULINK_ENABLED}, SOULINK_ADMIN_ID={settings.SOULINK_ADMIN_ID}")
     
-    # Check if user is in allowed groups
     allowed_groups_result = await is_user_in_allowed_groups(user_id, context)
     logger.debug(f"is_user_in_allowed_groups result: {allowed_groups_result}")
     
@@ -175,7 +174,6 @@ async def is_user_authorized(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
         logger.debug(f"User {user_id} DENIED - not in allowed groups")
         return False
     
-    # Check soulink authentication if enabled
     soulink_result = await has_soulink_access(user_id, context)
     logger.debug(f"has_soulink_access result: {soulink_result}")
     
@@ -220,24 +218,20 @@ async def is_user_in_allowed_groups(user_id: int, context: ContextTypes.DEFAULT_
     """
     logger.debug(f"Checking allowed groups for user {user_id}")
     
-    # Build list of allowed group IDs with validation
     allowed_groups = set()
     
-    # Validate main GROUP_ID
     if settings.GROUP_ID:
         try:
-            # Try to convert to int to validate format (Telegram group IDs are integers)
             validated_group_id = int(settings.GROUP_ID)
             allowed_groups.add(str(validated_group_id))
         except (ValueError, TypeError):
             logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
     
-    # Validate additional group IDs
     if settings.ALLOWED_GROUP_IDS:
         additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
         for gid in additional_groups:
             try:
-                validated_gid = int(gid)  # Validate format
+                validated_gid = int(gid)
                 allowed_groups.add(str(validated_gid))
             except (ValueError, TypeError):
                 logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
@@ -245,7 +239,6 @@ async def is_user_in_allowed_groups(user_id: int, context: ContextTypes.DEFAULT_
     
     logger.debug(f"Allowed groups to check: {allowed_groups}")
     
-    # Check membership in each allowed group
     for group_id in allowed_groups:
         logger.debug(f"Checking membership in group {group_id}")
         try:
@@ -255,30 +248,21 @@ async def is_user_in_allowed_groups(user_id: int, context: ContextTypes.DEFAULT_
                 logger.debug(f"User {user_id} is a {member.status} in group {group_id}")
                 return True
         except BadRequest as e:
-            # User not found in group, chat not found, or invalid chat ID
             logger.debug(f"BadRequest for user {user_id} in group {group_id}: {e}")
             continue
         except Forbidden as e:
-            # Bot was kicked from group or lacks permission
             logger.warning(f"Bot lacks permission to check group {group_id}: {e}")
             continue
         except NetworkError as e:
-            # Network issues - this is more serious, should not silently continue
             logger.error(f"Network error checking group {group_id}: {e}")
-            # For network errors, we might want to fail secure (deny access) or retry
-            # For now, continue to next group but log as error
             continue
         except RetryAfter as e:
-            # Rate limiting - should respect the retry_after value
             logger.warning(f"Rate limited checking group {group_id}: retry after {e.retry_after}s")
-            # For rate limiting, we should ideally wait, but for now continue
             continue
         except TelegramError as e:
-            # Other Telegram-specific errors
             logger.error(f"Telegram error checking group {group_id}: {e}")
             continue
         except Exception as e:
-            # Unexpected errors - log and continue but treat as serious
             logger.error(f"Unexpected error checking group {group_id}: {e}")
             continue
     
@@ -320,10 +304,8 @@ async def get_user_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> s
     """
     user_groups = set()
     
-    # Build list of all groups the bot knows about with validation
     known_groups = set()
     
-    # Validate main GROUP_ID
     if settings.GROUP_ID:
         try:
             validated_group_id = int(settings.GROUP_ID)
@@ -331,7 +313,6 @@ async def get_user_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> s
         except (ValueError, TypeError):
             logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
     
-    # Validate additional group IDs
     if settings.ALLOWED_GROUP_IDS:
         additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
         for gid in additional_groups:
@@ -342,34 +323,27 @@ async def get_user_groups(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> s
                 logger.error(f"Invalid group ID format in ALLOWED_GROUP_IDS: {gid}")
                 continue
     
-    # Check membership in each known group
     for group_id in known_groups:
         try:
             member = await context.bot.get_chat_member(group_id, user_id)
             if member.status in ["member", "administrator", "creator"]:
                 user_groups.add(group_id)
         except BadRequest as e:
-            # User not found in group, chat not found, or invalid chat ID
             logger.debug(f"BadRequest checking membership for user {user_id} in group {group_id}: {e}")
             continue
         except Forbidden as e:
-            # Bot was kicked from group or lacks permission
             logger.warning(f"Bot lacks permission to check group {group_id}: {e}")
             continue
         except NetworkError as e:
-            # Network issues - log as error but continue
             logger.error(f"Network error checking membership for user {user_id} in group {group_id}: {e}")
             continue
         except RetryAfter as e:
-            # Rate limiting
             logger.warning(f"Rate limited checking membership for user {user_id} in group {group_id}: retry after {e.retry_after}s")
             continue
         except TelegramError as e:
-            # Other Telegram-specific errors
             logger.error(f"Telegram error checking membership for user {user_id} in group {group_id}: {e}")
             continue
         except Exception as e:
-            # Unexpected errors
             logger.error(f"Unexpected error checking membership for user {user_id} in group {group_id}: {e}")
             continue
     
@@ -425,7 +399,6 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
         logger.error("SOULINK_ENABLED is True but SOULINK_ADMIN_ID is not set - failing secure")
         return False
     
-    # Validate admin ID format
     try:
         admin_id = int(settings.SOULINK_ADMIN_ID)
         if admin_id <= 0:
@@ -435,11 +408,9 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
         logger.error(f"Invalid SOULINK_ADMIN_ID format: {settings.SOULINK_ADMIN_ID} - {e} - failing secure")
         return False
     
-    # Get groups for both user and admin
     user_groups = await get_user_groups(user_id, context)
     admin_groups = await get_user_groups(admin_id, context)
     
-    # Check if they share any groups
     shared_groups = user_groups.intersection(admin_groups)
     
     logger.debug(f"User {user_id} groups: {user_groups}")
@@ -470,13 +441,11 @@ def create_application(
     
     Handlers Configured:
     - /start: Introduction with full authentication
-    - /ask, /report, /propose, /connect: AI-powered commands with authentication
-    - /debug: Chat information display
+    - /ask, /connect: AI-powered commands with authentication
     - Chat member updates: Automatic group management
     - Text messages: Context-aware processing with security checks
       * Private chats: Direct message processing using memory agent
       * Supergroups: Knowledge graph extraction
-      * Replies: Command continuation with conversation context
     
     Args:
         ai_service: AI service instance for processing commands and responses
@@ -501,7 +470,6 @@ def create_application(
     application.bot_data.update(bot_data)
     application.add_handler(CommandHandler("start", handle_start))
     application.add_handler(CommandHandler(["ask", "connect"], handle_command))
-    # application.add_handler(CommandHandler(["ask", "report", "propose", "connect"], handle_command))
     application.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
@@ -569,18 +537,14 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
     
     logger.info(f"Bot chat member update - chat_id={chat_id}, type={chat_type}, title='{chat_title}'")
     
-    # Build list of allowed group IDs
     allowed_groups = set()
     
-    # Always include the main GROUP_ID
     allowed_groups.add(settings.GROUP_ID)
     
-    # Add additional allowed groups if configured
     if settings.ALLOWED_GROUP_IDS:
         additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
         allowed_groups.update(additional_groups)
     
-    # Check if bot was added to a group
     if result.new_chat_member.status in ["member", "administrator"]:
         if chat_id not in allowed_groups:
             logger.warning(f"Bot added to unauthorized group {chat_id}. Leaving immediately.")
@@ -624,7 +588,6 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if settings.APP_ENV == "dev":
         logger.debug(f"User info: {update.message.from_user.first_name} {update.message.from_user.last_name} (@{update.message.from_user.username})")
     
-    # Check if user is authorized
     if not await is_user_authorized(update.message.from_user.id, context):
         logger.debug(f"/start command DENIED for user {safe_user_log(update.message.from_user.id)}")
         logger.info(f"Ignoring /start command from unauthorized user {safe_user_log(update.message.from_user.id)}")
@@ -640,7 +603,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Processes text messages based on chat type with appropriate security measures:
     - Private chats: Full three-tier authentication + direct message processing with memory agent
     - Supergroups: Group authorization + knowledge graph extraction
-    - Reply handling: Authentication + command continuation
     
     Private Chat Processing:
     1. Group membership validation
@@ -653,10 +615,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     2. Message processing for knowledge graph extraction
     3. No individual user authentication required
     
-    Reply Processing:
-    1. Full authentication for pending command responses
-    2. Command continuation with AI service
-    3. Result persistence and cleanup
     
     Args:
         update: Telegram update containing the text message
@@ -666,7 +624,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         - Different authentication levels per chat type
         - Automatic unauthorized group filtering
         - Comprehensive audit logging
-        - Secure handling of command continuations
         - Input validation and sanitization
     """
     logger.debug(f"Full update: {safe_update_log(update)}")
@@ -674,7 +631,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_valid_text_message(update):
         return
 
-    # Add this logging at the top
     chat_id = update.message.chat.id
     chat_type = update.message.chat.type
     chat_title = update.message.chat.title if hasattr(update.message.chat, 'title') else "Private"
@@ -688,7 +644,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.debug(f"Private message received from user {safe_user_log(update.message.from_user.id)}")
         logger.debug(f"Message: {safe_message_log(update.message.text)}")
         
-        # Check if user is authorized
         if not await is_user_authorized(update.message.from_user.id, context):
             logger.debug(f"Private message DENIED for user {safe_user_log(update.message.from_user.id)}")
             logger.info(f"Ignoring private message from unauthorized user {safe_user_log(update.message.from_user.id)}")
@@ -696,7 +651,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.debug(f"Private message APPROVED for user {safe_user_log(update.message.from_user.id)}")
 
-        # Check if user exists in the system (BerlinHouse API check)
         user_exists = await graph_service.check_user_exists(update.message)
         logger.debug(f"user_exists: {user_exists}")
         if not user_exists:
@@ -706,11 +660,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # Process direct message using memory agent (no command)
         try:
             logger.debug(f"Processing direct message for user {safe_user_log(update.message.from_user.id)}")
-            response = await ai_service.run(None, update.message.text, update.message.from_user.id)
-            await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+            response = await ai_service.agent(update.message.text, update.message.from_user.id)
+            await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
             logger.debug(f"Successfully processed direct message for user {safe_user_log(update.message.from_user.id)}")
         except Exception as e:
             logger.error(f"Failed to process direct message for user {safe_user_log(update.message.from_user.id)}: {e}")
@@ -718,29 +671,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise
         return
 
-    if update.message.reply_to_message:
-        # Check if user is authorized for reply-based commands
-        if not await is_user_authorized(update.message.from_user.id, context):
-            logger.info(f"Ignoring reply from unauthorized user {safe_user_log(update.message.from_user.id)}")
-            return
-
-        pending_commands = context.application.bot_data.setdefault("pending_commands", {})
-        replied_id = update.message.reply_to_message.message_id
-        pending = pending_commands.get(replied_id)
-        if pending and pending["user_id"] == update.message.from_user.id:
-            command = pending["command"]
-            text_after_command = update.message.text.strip()
-            response = await ai_service.run(command, text_after_command, update.message.from_user.id)
-            await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
-            del pending_commands[replied_id]
-            return
 
     if update.message.chat.type == "supergroup":
-        # Verify this is an authorized supergroup
         chat_id = str(update.message.chat.id)
         allowed_groups = set()
         
-        # Validate main GROUP_ID
         if settings.GROUP_ID:
             try:
                 validated_group_id = int(settings.GROUP_ID)
@@ -748,7 +683,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except (ValueError, TypeError):
                 logger.error(f"Invalid GROUP_ID format: {settings.GROUP_ID}")
         
-        # Validate additional group IDs
         if settings.ALLOWED_GROUP_IDS:
             additional_groups = [gid.strip() for gid in settings.ALLOWED_GROUP_IDS.split(",") if gid.strip()]
             for gid in additional_groups:
@@ -770,13 +704,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle bot commands with comprehensive authentication and AI processing.
     
-    Processes TowerBot's AI-powered commands (/ask, /report, /propose, /connect)
+    Processes TowerBot's AI-powered commands (/ask, /connect)
     with full three-tier authentication and intelligent response generation.
     
     Supported Commands:
     - /ask: General questions and information requests
-    - /report: Community reports and observations
-    - /propose: Suggestions and proposals for the community
     - /connect: Connection requests and networking
     
     Authentication Process:
@@ -788,8 +720,7 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     1. Extracts command type and context from message
     2. Validates command has context (prompts with example if empty)
     3. Routes to AI service for intelligent response generation
-    4. Persists command and response for knowledge graph building
-    5. Handles pending commands for multi-turn conversations
+    4. Commands must include context in the initial message - no multi-turn continuation
     
     Args:
         update: Telegram update containing the bot command
@@ -809,7 +740,6 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.debug(f"Command received from user {safe_user_log(update.message.from_user.id)}")
     logger.debug(f"Command: {safe_message_log(update.message.text)}")
     
-    # Check if user is authorized
     if not await is_user_authorized(update.message.from_user.id, context):
         logger.debug(f"Command DENIED for user {safe_user_log(update.message.from_user.id)}")
         logger.info(f"Ignoring command from unauthorized user {safe_user_log(update.message.from_user.id)}")
@@ -825,7 +755,6 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.debug(f"Processing command '{command}' from user {safe_user_log(update.message.from_user.id)}")
 
-        # Check if user exists in the system (BerlinHouse API check)
         user_exists = await graph_service.check_user_exists(update.message)
         logger.debug(f"User exists check result: {user_exists}")
         if not user_exists:
@@ -837,19 +766,19 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not text_after_command:
             example = COMMAND_EXAMPLES.get(command, "what's the wifi password?")
-            sent_message = await update.message.reply_text(
+            await update.message.reply_text(
                 f"Please add some context after your command. <b>Example:</b> /{command} {example}",
                 reply_to_message_id=update.message.message_id,
                 parse_mode="HTML"
             )
-            context.application.bot_data.setdefault("pending_commands", {})[sent_message.message_id] = {
-                "command": command,
-                "user_id": update.message.from_user.id,
-            }
             return
 
-        response = await ai_service.run(command, text_after_command, update.message.from_user.id)
-        await update.message.reply_text(response.answer, reply_to_message_id=update.message.message_id)
+        if command == "ask":
+            response = await ai_service.handle_ask(text_after_command)
+        if command == "connect":
+            response = await ai_service.handle_connect(text_after_command)
+
+        await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
         logger.debug(f"Successfully processed command '{command}' from user {safe_user_log(update.message.from_user.id)}")
     except Exception as e:
         logger.error(f"Failed to process command '{command}' from user {safe_user_log(update.message.from_user.id)}: {e}")
@@ -908,14 +837,13 @@ async def lifespan(app: FastAPI):
             azure_deployment=settings.MODEL
         )
 
-        # Create connection pool with proper configuration
         pool = AsyncConnectionPool(
             conninfo=settings.POSTGRES_CONN_STRING,
             max_size=20,
+            open=False,
             kwargs=connection_kwargs,
         )
         
-        # Open the pool explicitly as recommended
         await pool.open()
 
         store = AsyncPostgresStore(

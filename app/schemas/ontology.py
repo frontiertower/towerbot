@@ -1,7 +1,12 @@
+"""Graph database ontology schemas for TowerBot knowledge graph.
+
+This module defines the entities and relationships used in the TowerBot knowledge graph,
+including user profiles, community events, projects, and their interconnections.
+"""
+
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
-# Entities
 class User(BaseModel):
     """A member of the Frontier Tower."""
     user_id: int = Field(..., description="Unique integer ID for the user.")
@@ -85,7 +90,6 @@ class Project(BaseModel):
     class Config:
         label = "Project"
 
-# Edges
 class Sent(BaseModel):
     """Sending relationship between a user and a message."""
     class Config:
