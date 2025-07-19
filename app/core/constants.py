@@ -1,6 +1,8 @@
 COMMAND_EXAMPLES = {
     "ask": "what's the wifi password?",
     "connect": "who can help me learn more about biotech?",
+    "report": "we need more toilet paper on the 9th floor",
+    "propose": "let's organize a community bbq on the rooftop",
 }
 
 INTRODUCTION = (

@@ -18,6 +18,14 @@ from app.core.tools import get_qa_agent_tools, get_connect_agent_tools
 logger = logging.getLogger(__name__)
 
 class AiService:
+    """AI service for managing conversational agents and LLM interactions.
+    
+    This service provides AI-powered capabilities for TowerBot including:
+    - Memory-enabled conversation agents for direct messages
+    - Specialized command handlers for /ask and /connect commands
+    - Session management for conversation continuity
+    - Integration with LangChain tools and agents
+    """
     def __init__(self):
         self.bot = None
         self.client = Client()
@@ -25,6 +33,13 @@ class AiService:
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
 
     def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
+        """Initialize the AI service with required components.
+        
+        Args:
+            llm: Azure OpenAI language model instance
+            store: PostgreSQL store for vector embeddings and memory
+            checkpointer: PostgreSQL checkpointer for conversation state
+        """
         self.llm = llm
         self.bot = create_react_agent(
             name="TowerBot",
@@ -38,6 +53,18 @@ class AiService:
         )
 
     def _get_or_create_session(self, user_id: int, command: str):
+        """Get existing session or create a new one for user conversations.
+        
+        Sessions are maintained for 1 hour to provide conversation continuity.
+        Each session is identified by user_id and command type.
+        
+        Args:
+            user_id: Telegram user ID
+            command: Command type or 'direct' for direct messages
+            
+        Returns:
+            str: Thread ID for the conversation session
+        """
         session_key = f"{user_id}_{command}"
         
         if session_key in self.user_sessions:
@@ -53,6 +80,14 @@ class AiService:
         return thread_id
     
     async def handle_ask(self, message: str):
+        """Handle /ask command using QA agent with specialized tools.
+        
+        Args:
+            message: User's question or query
+            
+        Returns:
+            str: AI-generated response to the user's question
+        """
         tools = get_qa_agent_tools(self.llm)
         prompt = self.client.pull_prompt("towerbot-ask")
 
@@ -66,6 +101,14 @@ class AiService:
         return response.get("output")
     
     async def handle_connect(self, message: str):
+        """Handle /connect command using connection agent with graph search tools.
+        
+        Args:
+            message: User's connection request or interest
+            
+        Returns:
+            str: AI-generated response with connection suggestions
+        """
         tools = get_connect_agent_tools()
         prompt = self.client.pull_prompt("towerbot-connect")
 
@@ -79,6 +122,18 @@ class AiService:
         return response.get("output")
 
     async def agent(self, message: str, user_id: int):
+        """Process direct messages using memory-enabled conversational agent.
+        
+        This method handles private chat interactions with full memory capabilities,
+        allowing for context-aware conversations that remember previous interactions.
+        
+        Args:
+            message: User's message content
+            user_id: Telegram user ID for session management
+            
+        Returns:
+            str: AI-generated conversational response
+        """
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
             {"role": "user", "content": message}

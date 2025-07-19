@@ -125,27 +125,22 @@ class GraphService:
             "RELATED_TO": RelatedTo,
         }
         self.edge_type_map = {
-            # User relationships
             ("User", "Event"): ["ATTENDS"],
             ("User", "Floor"): ["LOCATED_ON"],
             ("User", "Interest"): ["INTERESTED_IN"],
             ("User", "Project"): ["WORKS_ON"],
             ("User", "Task"): ["ASSIGNED_TO"],
             
-            # Message relationships
             ("User", "Message"): ["SENT"],
             ("Message", "Topic"): ["SENT_IN"],
             ("Message", "Message"): ["IN_REPLY_TO"],
             
-            # Location relationships
             ("Event", "Floor"): ["LOCATED_ON"],
             ("Project", "Floor"): ["LOCATED_ON"],
             
-            # Project relationships
             ("Task", "Project"): ["RELATED_TO"],
             ("Project", "Interest"): ["RELATED_TO"],
             
-            # Event relationships
             ("Event", "Interest"): ["RELATED_TO"],
         }
 
@@ -338,7 +333,6 @@ class GraphService:
             from_label: Label of the source node type
             to_label: Label of the target node type
         """
-        # Map node labels to their unique identifier fields
         id_fields = {
             "User": "user_id",
             "Message": "message_id",
@@ -347,7 +341,6 @@ class GraphService:
         from_id_field = id_fields.get(from_label, "id")
         to_id_field = id_fields.get(to_label, "id")
 
-        # Use MERGE to find or create nodes, then MERGE the relationship
         cypher = f"""
         MERGE (a:{from_label} {{{from_id_field}: $from_id}})
         MERGE (b:{to_label} {{{to_id_field}: $to_id}})

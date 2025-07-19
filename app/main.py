@@ -21,7 +21,6 @@ logging.basicConfig(
     ]
 )
 
-# Set specific log levels for noisy libraries
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("telegram").setLevel(logging.WARNING)
 logging.getLogger("openai").setLevel(logging.WARNING)
