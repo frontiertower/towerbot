@@ -1,0 +1,7 @@
+.env*
+.git*
+**/*.pyc
+.venv/
+supabase/
+static/bulk/
+app/schemas/generated_enums.py
