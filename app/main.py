@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks
 
 from app.core.lifespan import lifespan
+from app.api.connections import graph_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="TowerBot", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.include_router(graph_router)
 
 async def process_telegram_update(tg_app, update_data):
     """Process a Telegram update in the background.

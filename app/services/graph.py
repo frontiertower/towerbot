@@ -5,27 +5,24 @@ the knowledge graph using Graphiti, including entity extraction, relationship ma
 and Telegram message processing.
 """
 
-import json
 import logging
 
-from pathlib import Path
-from datetime import timezone, datetime
+from datetime import timezone
 
 from graphiti_core import Graphiti
 from openai import AsyncAzureOpenAI
 from telegram import Message as TelegramMessage
-from graphiti_core.utils.bulk_utils import RawEpisode
 from graphiti_core.nodes import EpisodeType, EpisodicNode
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
 
 from app.core.config import settings
+from app.schemas.generated_enums import EDGE_TYPE_MAP, NodeTypeEnum, EdgeTypeEnum
 from app.schemas.ontology import (
     User, Topic, Message, Sent, InReplyTo, SentIn, 
     Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, Floor, RelatedTo
 )
-from app.schemas.generated_enums import EDGE_TYPE_MAP, NodeTypeEnum, EdgeTypeEnum
 
 logger = logging.getLogger(__name__)
 
