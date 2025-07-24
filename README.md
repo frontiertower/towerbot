@@ -143,6 +143,7 @@ This system ensures your knowledge graph schema and application code stay perfec
 
 - **AI Q&A:** `/ask <question>` in Telegram, get instant, context-aware answers
 - **Community Connections:** `/connect <interest>` to find people, projects, or resources
+- **Supply Requests:** `/request <item>` to create supply requests through BerlinHouse API
 - **Direct Messages:** Private conversations with memory agent for personalized interactions
 - **Dynamic Agent System:** Specialized AI agents for different tasks with configurable tools
 - **Persistent Memory:** Stores all questions/messages for analytics and context using LangMem
@@ -172,6 +173,8 @@ TowerBot responds to the following commands in your Telegram group and handles d
   _Example:_ `/ask what's the wifi password?`
 - `/connect <interest>` — Find people, projects, or resources related to a topic.  
   _Example:_ `/connect who can help me learn more about biotech?`
+- `/request <item>` — Create supply requests for community resources and materials.  
+  _Example:_ `/request office supplies for the co-working space`
 - `/start` — Get an introduction message with bot capabilities
 
 ### Direct Messages (Private Chats)
@@ -183,11 +186,12 @@ TowerBot responds to the following commands in your Telegram group and handles d
 
 ### Available Tools
 
-**Command Agents (Ask, Connect):**
+**Command Agents (Ask, Connect, Request):**
 
 - **Tower Information:** Access building details, amenities, and floor plans
 - **Calendar Events:** Get upcoming events from the community calendar
 - **Community Search:** Find connections and relationships in the community graph
+- **Supply Requests:** Create and manage supply requests through BerlinHouse API
 - **Memory Management:** Persistent conversation memory for better context
 
 **Memory Agent (Direct Messages):**
@@ -357,8 +361,8 @@ NEO4J_USER=your-neo4j-user          # e.g., neo4j
 NEO4J_PASSWORD=your-neo4j-password
 
 # External APIs
-BERLINHOUSE_EMAIL=your-email         # For BerlinHouse API
-BERLINHOUSE_PASSWORD=your-password
+BERLINHOUSE_API_KEY=your-api-key     # BerlinHouse API key for community data and supply requests
+BERLINHOUSE_BASE_URL=https://api.berlinhouse.com  # BerlinHouse API base URL
 
 # Observability (Optional)
 LANGSMITH_API_KEY=your-langsmith-api-key      # LangSmith API key for tracing

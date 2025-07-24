@@ -1,7 +1,8 @@
 """Core tools and utilities for TowerBot AI agents.
 
 This module provides tools for external API integrations, graph search functionality,
-and agent utilities used by the QA and Connect agents.
+and agent utilities used by the QA, Connect, and Request agents. Includes BerlinHouse
+API integration for community data and supply request management.
 """
 
 import json
@@ -96,7 +97,7 @@ async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI
 
 
 def get_calendar_events_tool(llm: AzureChatOpenAI):
-    @tool
+    @tool("get_calendar_events", parse_docstring=True)
     async def get_calendar_events():
         """
         Retrieve all future events from the Luma calendar API and summarize them using an LLM.
@@ -122,7 +123,7 @@ def get_calendar_events_tool(llm: AzureChatOpenAI):
             raise Exception(f"API Request Error: {e}") from e
     return get_calendar_events
 
-@tool
+@tool("get_tower_communities", parse_docstring=True)
 async def get_tower_communities(search: Optional[str] = None):
     """
     Fetch and summarize BerlinHouse communities using the BerlinHouse API, with optional search functionality.
@@ -136,14 +137,13 @@ async def get_tower_communities(search: Optional[str] = None):
     Raises:
         Exception: If the BerlinHouse API is unavailable or returns an error.
     """
-    url = "https://api.berlinhouse.com"
     headers = {
         "X-API-Key": settings.BERLINHOUSE_API_KEY,
         "Content-Type": "application/json"
     }
     try:
         async with httpx.AsyncClient(verify=False) as client:
-            endpoint = url + "/communities/"
+            endpoint = settings.BERLINHOUSE_BASE_URL + "/communities/"
             params = {}
             if search:
                 params["search"] = search
@@ -157,8 +157,51 @@ async def get_tower_communities(search: Optional[str] = None):
     except httpx.RequestError as e:
         logger.error(f"BerlinHouse communities API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
+    
 
-@tool
+@tool("create_supply_request", parse_docstring=True)
+async def create_supply_request(item: str, additional_info: Optional[str] = None):
+    """
+    Create a new supply request in the BerlinHouse system.
+
+    This tool sends a POST request to the BerlinHouse API to create a supply request for a specific item and amount,
+    along with any additional information provided by the user. It is used to request supplies or resources needed
+    within the BerlinHouse community.
+
+    Args:
+        item (str): The name or description of the item being requested.
+        additional_info (Optional[str]): Any extra details or context about the supply request.
+
+    Returns:
+        dict[str, Any]: The response from the BerlinHouse API containing details of the created supply request.
+
+    Raises:
+        Exception: If the BerlinHouse API is unavailable or returns an error.
+    """
+    headers = {
+        "X-API-Key": settings.BERLINHOUSE_API_KEY,
+        "Content-Type": "application/json"
+    }
+    try:
+        async with httpx.AsyncClient(verify=False) as client:
+            endpoint = settings.BERLINHOUSE_BASE_URL + "/supply-requests/"
+            data = {
+                "item": item,
+                "amount": 0,
+            }
+            if additional_info is not None:
+                data["additional_info"] = additional_info
+            response = await client.post(endpoint, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"BerlinHouse communities API HTTP error: {e.response.status_code} - {e.response.text}")
+        raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
+    except httpx.RequestError as e:
+        logger.error(f"BerlinHouse communities API request error: {e}")
+        raise Exception(f"API Request Error: {e}") from e
+
+@tool("get_tower_info", parse_docstring=True)
 def get_tower_info():
     """
     Retrieve detailed information about the Frontier Towner building.
@@ -245,4 +288,14 @@ def get_connect_agent_tools():
     """
     return [
         get_connections,
+    ]
+
+def get_request_agent_tools():
+    """Get the list of tools available to the Request agent.
+    
+    Returns:
+        list: List of tools for the Request agent
+    """
+    return [
+        create_supply_request,
     ]

@@ -469,7 +469,7 @@ def create_application(
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
     application.bot_data.update(bot_data)
     application.add_handler(CommandHandler("start", handle_start))
-    application.add_handler(CommandHandler(["ask", "connect"], handle_command))
+    application.add_handler(CommandHandler(["ask", "connect", "request"], handle_command))
     application.add_handler(ChatMemberHandler(handle_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
     message_handler = MessageHandler(
         filters.TEXT & (~filters.COMMAND) & (
@@ -777,6 +777,8 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = await ai_service.handle_ask(text_after_command)
         if command == "connect":
             response = await ai_service.handle_connect(text_after_command)
+        if command == "request":
+            response = await ai_service.handle_request(text_after_command)
 
         await update.message.reply_text(response, reply_to_message_id=update.message.message_id)
         logger.debug(f"Successfully processed command '{command}' from user {safe_user_log(update.message.from_user.id)}")

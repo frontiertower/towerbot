@@ -122,6 +122,28 @@ class TestAiService:
             mock_executor.ainvoke.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch('app.services.ai.create_tool_calling_agent')
+    @patch('app.services.ai.AgentExecutor')
+    async def test_handle_request(self, mock_executor_class, mock_create_agent, ai_service, mock_llm):
+        """Test handling /request command."""
+        ai_service.llm = mock_llm
+        ai_service.client = Mock()
+        ai_service.client.pull_prompt.return_value = Mock()
+        
+        mock_agent = Mock()
+        mock_create_agent.return_value = mock_agent
+        
+        mock_executor = Mock()
+        mock_executor.ainvoke = AsyncMock(return_value={"output": "Supply request created"})
+        mock_executor_class.return_value = mock_executor
+        
+        with patch('app.services.ai.get_request_agent_tools', return_value=[]):
+            result = await ai_service.handle_request("I need office supplies")
+            
+            assert result == "Supply request created"
+            mock_executor.ainvoke.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_agent(self, ai_service):
         """Test the conversational agent."""
         user_id = 123456789
