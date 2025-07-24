@@ -68,8 +68,8 @@ class Settings(BaseSettings):
         DEFAULT_DATABASE: Default database name (required)
     
     BerlinHouse API Configuration:
-        BERLINHOUSE_EMAIL: Email for BerlinHouse API authentication (required)
-        BERLINHOUSE_PASSWORD: Password for BerlinHouse API authentication (required)
+        BERLINHOUSE_API_KEY: API key for BerlinHouse service authentication (required)
+        BERLINHOUSE_BASE_URL: Base URL for BerlinHouse API endpoints (required)
         
     AI Model Configuration:
         MODEL: Name of the main AI model to use (required)
@@ -96,6 +96,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_KEY: str
     AZURE_OPENAI_ENDPOINT: str
     BERLINHOUSE_API_KEY: str
+    BERLINHOUSE_BASE_URL: str
     BOT_TOKEN: str
     DEFAULT_DATABASE: str
     EMBEDDING_MODEL: str

@@ -9,9 +9,10 @@ from pathlib import Path
 import httpx
 
 from app.core.tools import (
-    get_jwt_token, summarize_calendar_events, get_calendar_events_tool,
+    summarize_calendar_events, get_calendar_events_tool,
     get_tower_communities, get_tower_info, get_connections,
-    get_qa_agent_tools, get_connect_agent_tools, SEARCH_RECIPE_MAP
+    create_supply_request, get_qa_agent_tools, get_connect_agent_tools, 
+    get_request_agent_tools, SEARCH_RECIPE_MAP
 )
 from app.schemas.tools import SearchRecipeEnum, NodeTypeEnum, EdgeTypeEnum
 
@@ -20,53 +21,6 @@ from app.schemas.tools import SearchRecipeEnum, NodeTypeEnum, EdgeTypeEnum
 class TestExternalAPITools:
     """Test cases for external API integration tools."""
 
-    @patch('app.core.tools.httpx.AsyncClient')
-    async def test_get_jwt_token_success(self, mock_client_class, mock_settings):
-        """Test successful JWT token retrieval."""
-        mock_client = AsyncMock()
-        mock_response = Mock()
-        mock_response.json.return_value = {"access": "test-token"}
-        mock_response.raise_for_status = Mock()
-        mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__aenter__.return_value = mock_client
-        
-        with patch('app.core.tools.settings', mock_settings):
-            token = await get_jwt_token()
-            
-            assert token == "test-token"
-            mock_client.post.assert_called_once()
-            call_args = mock_client.post.call_args
-            assert call_args[0][0] == "https://api.berlinhouse.com/auth/login/"
-            assert call_args[1]["json"]["email"] == mock_settings.BERLINHOUSE_EMAIL
-            assert call_args[1]["json"]["password"] == mock_settings.BERLINHOUSE_PASSWORD
-
-    @patch('app.core.tools.httpx.AsyncClient')
-    async def test_get_jwt_token_http_error(self, mock_client_class, mock_settings):
-        """Test JWT token retrieval with HTTP error."""
-        mock_client = AsyncMock()
-        mock_response = Mock()
-        mock_response.status_code = 401
-        mock_response.text = "Unauthorized"
-        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "401 Unauthorized", request=Mock(), response=mock_response
-        )
-        mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__aenter__.return_value = mock_client
-        
-        with patch('app.core.tools.settings', mock_settings):
-            with pytest.raises(Exception, match="API Error: 401"):
-                await get_jwt_token()
-
-    @patch('app.core.tools.httpx.AsyncClient')
-    async def test_get_jwt_token_request_error(self, mock_client_class, mock_settings):
-        """Test JWT token retrieval with request error."""
-        mock_client = AsyncMock()
-        mock_client.post.side_effect = httpx.RequestError("Connection failed")
-        mock_client_class.return_value.__aenter__.return_value = mock_client
-        
-        with patch('app.core.tools.settings', mock_settings):
-            with pytest.raises(Exception, match="API Request Error"):
-                await get_jwt_token()
 
     async def test_summarize_calendar_events(self, mock_llm):
         """Test calendar events summarization."""
@@ -124,11 +78,9 @@ class TestExternalAPITools:
         with pytest.raises(Exception, match="API Error: 500"):
             await calendar_tool()
 
-    @patch('app.core.tools.get_jwt_token')
     @patch('app.core.tools.httpx.AsyncClient')
-    async def test_get_tower_communities_success(self, mock_client_class, mock_jwt):
+    async def test_get_tower_communities_success(self, mock_client_class, mock_settings):
         """Test successful tower communities retrieval."""
-        mock_jwt.return_value = "test-token"
         mock_client = AsyncMock()
         mock_response = Mock()
         mock_response.json.return_value = {"communities": ["community1", "community2"]}
@@ -136,18 +88,17 @@ class TestExternalAPITools:
         mock_client.get.return_value = mock_response
         mock_client_class.return_value.__aenter__.return_value = mock_client
         
-        result = await get_tower_communities()
+        with patch('app.core.tools.settings', mock_settings):
+            result = await get_tower_communities()
         
         assert result == {"communities": ["community1", "community2"]}
         mock_client.get.assert_called_once()
         call_args = mock_client.get.call_args
-        assert call_args[1]["headers"]["Authorization"] == "Bearer test-token"
+        assert call_args[1]["headers"]["X-API-Key"] == mock_settings.BERLINHOUSE_API_KEY
 
-    @patch('app.core.tools.get_jwt_token')
     @patch('app.core.tools.httpx.AsyncClient')
-    async def test_get_tower_communities_http_error(self, mock_client_class, mock_jwt):
+    async def test_get_tower_communities_http_error(self, mock_client_class, mock_settings):
         """Test tower communities retrieval with HTTP error."""
-        mock_jwt.return_value = "test-token"
         mock_client = AsyncMock()
         mock_response = Mock()
         mock_response.status_code = 403
@@ -158,8 +109,46 @@ class TestExternalAPITools:
         mock_client.get.return_value = mock_response
         mock_client_class.return_value.__aenter__.return_value = mock_client
         
-        with pytest.raises(Exception, match="API Error: 403"):
-            await get_tower_communities()
+        with patch('app.core.tools.settings', mock_settings):
+            with pytest.raises(Exception, match="API Error: 403"):
+                await get_tower_communities()
+
+    @patch('app.core.tools.httpx.AsyncClient')
+    async def test_create_supply_request_success(self, mock_client_class, mock_settings):
+        """Test successful supply request creation."""
+        mock_client = AsyncMock()
+        mock_response = Mock()
+        mock_response.json.return_value = {"id": 123, "item": "office supplies", "status": "created"}
+        mock_response.raise_for_status = Mock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+        
+        with patch('app.core.tools.settings', mock_settings):
+            result = await create_supply_request("office supplies", "Need pens and paper")
+        
+        assert result == {"id": 123, "item": "office supplies", "status": "created"}
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
+        assert call_args[1]["headers"]["X-API-Key"] == mock_settings.BERLINHOUSE_API_KEY
+        assert call_args[1]["json"]["item"] == "office supplies"
+        assert call_args[1]["json"]["additional_info"] == "Need pens and paper"
+
+    @patch('app.core.tools.httpx.AsyncClient')
+    async def test_create_supply_request_http_error(self, mock_client_class, mock_settings):
+        """Test supply request creation with HTTP error."""
+        mock_client = AsyncMock()
+        mock_response = Mock()
+        mock_response.status_code = 400
+        mock_response.text = "Bad Request"
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "400 Bad Request", request=Mock(), response=mock_response
+        )
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+        
+        with patch('app.core.tools.settings', mock_settings):
+            with pytest.raises(Exception, match="API Error: 400"):
+                await create_supply_request("invalid item")
 
 
 class TestLocalDataTools:
@@ -268,6 +257,15 @@ class TestToolConfiguration:
         # Should include connections tool
         tool_names = [tool.__name__ if hasattr(tool, '__name__') else str(tool) for tool in tools]
         assert any('get_connections' in str(tool) or 'connection' in str(tool).lower() for tool in tool_names)
+
+    def test_get_request_agent_tools(self):
+        """Test Request agent tools configuration."""
+        tools = get_request_agent_tools()
+        
+        assert len(tools) > 0
+        # Should include supply request tool
+        tool_names = [tool.__name__ if hasattr(tool, '__name__') else str(tool) for tool in tools]
+        assert any('create_supply_request' in str(tool) or 'supply' in str(tool).lower() for tool in tool_names)
 
     def test_search_recipe_enum_values(self):
         """Test that SearchRecipeEnum has expected values."""

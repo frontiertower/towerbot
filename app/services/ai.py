@@ -12,8 +12,7 @@ from langgraph.checkpoint.postgres.base import BasePostgresSaver
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
-from app.core.constants import SYSTEM_PROMPT
-from app.core.tools import get_qa_agent_tools, get_connect_agent_tools
+from app.core.tools import get_qa_agent_tools, get_connect_agent_tools, get_request_agent_tools
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +21,10 @@ class AiService:
     
     This service provides AI-powered capabilities for TowerBot including:
     - Memory-enabled conversation agents for direct messages
-    - Specialized command handlers for /ask and /connect commands
+    - Specialized command handlers for /ask, /connect, and /request commands
     - Session management for conversation continuity
     - Integration with LangChain tools and agents
+    - Supply request processing through BerlinHouse API integration
     """
     def __init__(self):
         self.bot = None
@@ -124,6 +124,33 @@ class AiService:
             })
 
         return response.get("output")
+    
+    async def handle_request(self, message: str):
+        """
+        Handle /request command using the request agent with supply request tools.
+
+        This method processes user requests for supplies or resources by leveraging
+        specialized tools and prompts. It creates an agent executor configured for
+        handling supply requests and invokes it with the user's message.
+
+        Args:
+            message (str): The user's supply request or inquiry.
+
+        Returns:
+            str: AI-generated response regarding the supply request.
+        """
+        tools = get_request_agent_tools()
+        prompt = self.client.pull_prompt("towerbot-request")
+
+        agent = create_tool_calling_agent(self.llm, tools, prompt)
+        agent_executor = AgentExecutor(name="Request", agent=agent, tools=tools)
+
+        response = await agent_executor.ainvoke({
+                "input": message,
+                "chat_history": []
+            })
+
+        return response.get("output")
 
     async def agent(self, message: str, user_id: int):
         """Process direct messages using memory-enabled conversational agent.
@@ -138,8 +165,10 @@ class AiService:
         Returns:
             str: AI-generated conversational response
         """
+        prompt = self.client.pull_prompt("towerbot-general")
+
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT.format(system_time="now")},
+            {"role": "system", "content": prompt.messages[0].prompt.template.format(system_time=datetime.now())},
             {"role": "user", "content": message}
         ]
 
