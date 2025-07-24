@@ -32,6 +32,7 @@ from graphiti_core.search.search_config_recipes import (
     COMMUNITY_HYBRID_SEARCH_RRF,
     COMMUNITY_HYBRID_SEARCH_MMR,
 )
+
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
 from app.schemas.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
@@ -59,34 +60,6 @@ SEARCH_RECIPE_MAP = {
 This dictionary maps the SearchRecipeEnum values to their actual Graphiti search
 configuration objects for use in graph search operations.
 """
-
-async def get_jwt_token():
-    """
-    Obtain a JWT access token from the BerlinHouse API using credentials from settings.
-
-    Returns:
-        str: The JWT access token as a string.
-
-    Raises:
-        Exception: If the API returns an error or the request fails.
-    """
-    url = "https://api.berlinhouse.com/auth/login/"
-    email = settings.BERLINHOUSE_EMAIL
-    password = settings.BERLINHOUSE_PASSWORD
-    payload = {"email": email, "password": password}
-
-    try:
-        async with httpx.AsyncClient(verify=False) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("access")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"BerlinHouse API HTTP error: {e.response.status_code} - {e.response.text}")
-        raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
-    except httpx.RequestError as e:
-        logger.error(f"BerlinHouse API request error: {e}")
-        raise Exception(f"API Request Error: {e}") from e
 
 async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI):
     """
@@ -150,9 +123,12 @@ def get_calendar_events_tool(llm: AzureChatOpenAI):
     return get_calendar_events
 
 @tool
-async def get_tower_communities():
+async def get_tower_communities(search: Optional[str] = None):
     """
-    Fetch and summarize all BerlinHouse communities using the BerlinHouse API and LLM summarization.
+    Fetch and summarize BerlinHouse communities using the BerlinHouse API, with optional search functionality.
+
+    Args:
+        search: Optional search keywords to filter communities
 
     Returns:
         Optional[dict[str, Any]]: A summary of BerlinHouse communities, or raises an exception if unavailable.
@@ -160,13 +136,18 @@ async def get_tower_communities():
     Raises:
         Exception: If the BerlinHouse API is unavailable or returns an error.
     """
-    url = "https://api.berlinhouse.com/communities/"
+    url = "https://api.berlinhouse.com"
     headers = {
-        "Authorization": f"Bearer {await get_jwt_token()}"
+        "X-API-Key": settings.BERLINHOUSE_API_KEY,
+        "Content-Type": "application/json"
     }
     try:
         async with httpx.AsyncClient(verify=False) as client:
-            response = await client.get(url, headers=headers)
+            endpoint = url + "/communities/"
+            params = {}
+            if search:
+                params["search"] = search
+            response = await client.get(endpoint, headers=headers, params=params)
             response.raise_for_status()
             communities = response.json()
             return communities
@@ -252,6 +233,7 @@ def get_qa_agent_tools(llm: AzureChatOpenAI):
     """
     return [
         get_tower_info,
+        get_tower_communities,
         get_calendar_events_tool(llm),
     ]
 

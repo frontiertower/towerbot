@@ -13,9 +13,6 @@ class User(BaseModel):
     username: Optional[str] = Field(None, description="The user's username, if available.")
     first_name: str = Field(..., description="The user's first name, if available.")
     last_name: Optional[str] = Field(None, description="The user's last name, if available.")
-    nickname: Optional[str] = Field(None, description="The user's nickname, if available.")
-    floor: Optional[int] = Field(None, description="The level of the floor this user is a member of, if any.")
-    bio: Optional[str] = Field(None, description="A short biography or summary of the user's interests and background.")
 
     class Config:
         label = "User"
@@ -48,10 +45,8 @@ class Floor(BaseModel):
 
 class Event(BaseModel):
     """A scheduled gathering or activity."""
-    title: str = Field(..., description="Title or name of the event.")
     luma_id: Optional[str] = Field(None, description="Luma ID of the event.")
     url: Optional[str] = Field(None, description="URL of the event.")
-    description: Optional[str] = Field(None, description="Detailed description of the event.")
     start_at: Optional[str] = Field(
         None,
         description="Start time of the event as an ISO 8601 string, e.g., '2024-06-01T10:00:00Z'."
@@ -77,9 +72,7 @@ class Interest(BaseModel):
 
 class Project(BaseModel):
     """A collaborative project or initiative."""
-    title: str = Field(..., unique=True)
     status: Optional[str] = Field("Active", description="The current status, e.g., 'Active', 'Archived'.")
-    description: Optional[str] = Field(None, description="A detailed summary of the project's goals and technology.")
 
     class Config:
         label = "Project"

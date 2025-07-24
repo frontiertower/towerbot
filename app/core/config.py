@@ -95,8 +95,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "dev"
     AZURE_OPENAI_API_KEY: str
     AZURE_OPENAI_ENDPOINT: str
-    BERLINHOUSE_EMAIL: str
-    BERLINHOUSE_PASSWORD: str
+    BERLINHOUSE_API_KEY: str
     BOT_TOKEN: str
     DEFAULT_DATABASE: str
     EMBEDDING_MODEL: str
@@ -114,6 +113,7 @@ class Settings(BaseSettings):
     NOTION_API_KEY: str
     PORT: int = 3000
     POSTGRES_CONN_STRING: str
+    REASONING_MODEL: str
     RERANKER_MODEL: str
     WEBHOOK_URL: str
 
