@@ -80,8 +80,9 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
-from app.services.ai import AiService
-from app.services.graph import GraphService
+from app.services.ai import ai_service
+from app.services.auth import auth_service
+from app.services.graph import graph_service
 from app.core.constants import INTRODUCTION, COMMAND_EXAMPLES
 
 logger = logging.getLogger(__name__)
@@ -422,10 +423,7 @@ async def has_soulink_access(user_id: int, context: ContextTypes.DEFAULT_TYPE) -
     
     return result
 
-def create_application(
-    ai_service: AiService,
-    graph_service: GraphService,
-):
+def create_application():
     """Create and configure the Telegram bot application with comprehensive security.
     
     Sets up the Telegram bot with all necessary handlers, security features,
@@ -481,7 +479,7 @@ def create_application(
     application.add_handler(message_handler)
     return application
 
-def start_scheduler(graph_service: GraphService):
+def start_scheduler():
     """Start the background task scheduler.
     
     Configures and starts a background scheduler for periodic tasks
@@ -495,6 +493,8 @@ def start_scheduler(graph_service: GraphService):
     """
     scheduler = BackgroundScheduler()
     scheduler.add_job(graph_service.build_communities, CronTrigger(hour=0, minute=0))
+    # Removed the handle_ask scheduled job as it requires a message parameter
+    # and is designed for interactive use, not background processing
     scheduler.start()
     logger.info("APScheduler started.")
 
@@ -637,8 +637,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"Message from chat_id={chat_id}, type={chat_type}, title='{chat_title}'")
 
-    ai_service: AiService = context.application.bot_data["ai_service"]
-    graph_service: GraphService = context.application.bot_data["graph_service"]
+    ai_service = context.application.bot_data["ai_service"]
+    graph_service = context.application.bot_data["graph_service"]
 
     if update.message.chat.type == "private":
         logger.debug(f"Private message received from user {safe_user_log(update.message.from_user.id)}")
@@ -748,8 +748,8 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.debug(f"Command APPROVED for user {safe_user_log(update.message.from_user.id)}")
 
     try:
-        ai_service: AiService = context.application.bot_data["ai_service"]
-        graph_service: GraphService = context.application.bot_data["graph_service"]
+        ai_service = context.application.bot_data["ai_service"]
+        graph_service = context.application.bot_data["graph_service"]
         command = update.message.text.split()[0][1:]
         text_after_command = update.message.text[len(command) + 2:].strip()
         
@@ -826,6 +826,7 @@ async def lifespan(app: FastAPI):
     State Management:
         - app.state.ai_service: AI service for command processing
         - app.state.graph_service: Graph service for knowledge management
+        - app.state.auth_service: Auth service for API key validation
         - app.state.tg_app: Telegram bot application
         - app.state.scheduler: Background task scheduler
     """
@@ -848,6 +849,8 @@ async def lifespan(app: FastAPI):
         
         await pool.open()
 
+        auth_service.set_database_pool(pool)
+
         store = AsyncPostgresStore(
             pool,
             index={
@@ -861,21 +864,19 @@ async def lifespan(app: FastAPI):
         await store.setup()
         await checkpointer.setup()
 
-        ai_service = AiService()
-        graph_service = GraphService()
-
         ai_service.connect(llm, store, checkpointer)
 
         await graph_service.connect()
 
-        tg_app = create_application(ai_service, graph_service)
+        tg_app = create_application()
 
         await tg_app.initialize()
 
-        scheduler = start_scheduler(graph_service)
+        scheduler = start_scheduler()
 
         app.state.ai_service = ai_service
         app.state.graph_service = graph_service
+        app.state.auth_service = auth_service
         app.state.tg_app = tg_app
         app.state.scheduler = scheduler
 

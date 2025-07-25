@@ -10,8 +10,8 @@ from telegram import Update
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks
 
+from app.api.graph import graph_router
 from app.core.lifespan import lifespan
-from app.api.connections import graph_router
 
 logging.basicConfig(
     level=logging.INFO,

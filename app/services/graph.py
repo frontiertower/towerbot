@@ -192,7 +192,8 @@ class GraphService:
 
         This method creates an episode in the knowledge graph representing the provided
         Telegram message, extracting and storing relevant entities and relationships
-        (excluding Topic and Floor types) using Graphiti's processing.
+        (excluding Topic and Floor types) using Graphiti's temporal processing.
+        Episodes are automatically assigned to the configured group ID for organization.
 
         Args:
             message: The Telegram message to be represented as an episode in the graph.
@@ -239,3 +240,5 @@ class GraphService:
         except Exception as e:
             logger.error(f"Failed to reprocess episodes: {e}")
             raise
+
+graph_service = GraphService()

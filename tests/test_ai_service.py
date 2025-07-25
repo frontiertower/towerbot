@@ -49,10 +49,10 @@ class TestAiService:
         session_key = f"{user_id}_{command}"
         thread_id = f"{user_id}_{command}_test123"
         
-        # Create an existing session that's less than 1 hour old
+        # Create an existing session that's less than 24 hours old
         ai_service.user_sessions[session_key] = {
             'thread_id': thread_id,
-            'created_at': datetime.now() - timedelta(minutes=30)
+            'created_at': datetime.now() - timedelta(hours=12)
         }
         
         result_thread_id = ai_service._get_or_create_session(user_id, command)
@@ -66,10 +66,10 @@ class TestAiService:
         session_key = f"{user_id}_{command}"
         old_thread_id = f"{user_id}_{command}_old123"
         
-        # Create an existing session that's more than 1 hour old
+        # Create an existing session that's more than 24 hours old
         ai_service.user_sessions[session_key] = {
             'thread_id': old_thread_id,
-            'created_at': datetime.now() - timedelta(hours=2)
+            'created_at': datetime.now() - timedelta(hours=25)
         }
         
         new_thread_id = ai_service._get_or_create_session(user_id, command)
@@ -155,15 +155,21 @@ class TestAiService:
         }
         ai_service.bot = mock_bot
         
-        with patch('app.services.ai.SYSTEM_PROMPT', "Test system prompt {system_time}"):
-            result = await ai_service.agent(message, user_id)
-            
-            assert result == "I'm doing well, thank you!"
-            mock_bot.ainvoke.assert_called_once()
-            
-            # Verify session was created
-            session_key = f"{user_id}_direct"
-            assert session_key in ai_service.user_sessions
+        # Mock the client and prompt
+        ai_service.client = Mock()
+        mock_prompt = Mock()
+        mock_prompt.messages = [Mock()]
+        mock_prompt.messages[0].prompt.template = "Test system prompt {system_time}"
+        ai_service.client.pull_prompt.return_value = mock_prompt
+        
+        result = await ai_service.agent(message, user_id)
+        
+        assert result == "I'm doing well, thank you!"
+        mock_bot.ainvoke.assert_called_once()
+        
+        # Verify session was created
+        session_key = f"{user_id}_direct"
+        assert session_key in ai_service.user_sessions
 
     @pytest.mark.asyncio
     async def test_agent_no_bot(self, ai_service):
@@ -181,10 +187,10 @@ class TestAiService:
         command = "test"
         session_key = f"{user_id}_{command}"
         
-        # Test session exactly at 1 hour boundary
+        # Test session exactly at 24 hour boundary
         ai_service.user_sessions[session_key] = {
             'thread_id': 'old_thread',
-            'created_at': datetime.now() - timedelta(hours=1, seconds=1)
+            'created_at': datetime.now() - timedelta(hours=24, seconds=1)
         }
         
         new_thread = ai_service._get_or_create_session(user_id, command)

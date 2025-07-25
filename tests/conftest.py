@@ -7,6 +7,7 @@ from datetime import datetime
 from telegram import User as TelegramUser, Message as TelegramMessage, Chat
 
 from app.services.ai import AiService
+from app.services.auth import AuthService
 from app.services.graph import GraphService
 from app.core.config import Settings
 
@@ -112,6 +113,12 @@ def mock_graphiti():
 def ai_service():
     """Create AiService instance for testing."""
     return AiService()
+
+
+@pytest.fixture
+def auth_service():
+    """Create AuthService instance for testing."""
+    return AuthService()
 
 
 @pytest.fixture

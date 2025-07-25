@@ -211,6 +211,89 @@ If you use a command without context, TowerBot will prompt you for more informat
 
 ---
 
+## 🔗 Graph API
+
+TowerBot provides a RESTful API endpoint for querying the temporal knowledge graph. This endpoint allows external applications to access community insights and relationships stored in the graph database.
+
+### Graph Query Endpoint
+
+**POST** `/api/v1/graph/query`
+
+Query the temporal knowledge graph using natural language queries.
+
+#### Authentication
+
+The graph endpoint requires API key authentication via Bearer token:
+
+```bash
+curl -X POST "https://your-server.com/api/v1/graph/query" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What relationships exist between users and projects?"}'
+```
+
+#### API Key Management
+
+1. **Database Setup**: API keys are stored in the `keys` table in PostgreSQL:
+   ```sql
+   CREATE TABLE keys (
+     id SERIAL PRIMARY KEY,
+     key VARCHAR(255) UNIQUE NOT NULL,
+     name VARCHAR(255),
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     disabled BOOLEAN DEFAULT FALSE
+   );
+   ```
+
+2. **Key Creation**: Insert API keys directly into the database:
+   ```sql
+   INSERT INTO keys (key, name) VALUES ('your-secure-api-key', 'External App');
+   ```
+
+3. **Key Validation**: The endpoint validates keys against the database on each request
+
+#### Request Format
+
+```json
+{
+  "query": "Find all connections related to biotech projects"
+}
+```
+
+#### Response Format
+
+```json
+{
+  "results": [
+    {
+      "uuid": "abc-123",
+      "name": "WORKS_ON",
+      "fact": "John works on the biotech project",
+      "created_at": "2025-07-25T10:30:00Z",
+      "source_node_uuid": "user-uuid",
+      "target_node_uuid": "project-uuid",
+      "episodes": ["episode-uuid"],
+      "valid_at": "2025-07-20T15:00:00Z"
+    }
+  ]
+}
+```
+
+#### Security Features
+
+- **Bearer Token Authentication**: Secure API key validation
+- **Database Integration**: Keys validated against PostgreSQL `keys` table
+- **Filtered Responses**: Internal attributes (embeddings) removed from responses
+- **Error Handling**: Proper HTTP status codes (401, 403, 500)
+
+#### Error Responses
+
+- **401 Unauthorized**: Missing or malformed Bearer token
+- **403 Forbidden**: Invalid API key
+- **500 Internal Server Error**: Database connection or query processing error
+
+---
+
 ## 🔐 Authentication & Security
 
 TowerBot implements a comprehensive three-tier authentication system to ensure secure access control for both commands and direct messages:
@@ -292,17 +375,20 @@ SOULINK_ADMIN_ID=123456789  # Your Telegram user ID
 
 ```mermaid
 graph TD;
-  TG["Telegram Group"] -->|/ask, /connect| BOT["TowerBot (python-telegram-bot)"]
+  TG["Telegram Group"] -->|/ask, /connect, /request| BOT["TowerBot (python-telegram-bot)"]
   PM["Private Messages"] -->|Direct Messages| BOT
   BOT --> API["FastAPI Backend"]
+  API --> AUTH["AuthService<br/>API Key Validation"]
   API --> AI["Dynamic AI Agents"]
   AI --> AG["Ask Agent<br/>QA Tools + Memory"]
   AI --> CN["Connect Agent<br/>Graph Tools + Memory"]
-  AI --> MM["Memory Agent<br/>Memory Tools Only"]
+  AI --> RQ["Request Agent<br/>Supply Request Tools"]
+  AI --> MM["Memory Agent<br/>All Tools + Memory"]
   API --> DB["PostgreSQL (Vectors)"]
   API --> GRAPH["Neo4j (Graph DB) + Graphiti"]
   API --> Health["/health Endpoint"]
   API --> Webhook["/telegram Endpoint"]
+  API --> GraphAPI["/api/v1/graph/query Endpoint"]
 ```
 
 **Agent System:**
@@ -504,6 +590,7 @@ towerbot/
 │   │   └── tools.py           # Tool parameter schemas with dynamic enum support
 │   ├── services/
 │   │   ├── ai.py              # Dynamic AI service with configurable agents
+│   │   ├── auth.py            # Authentication service for API key validation
 │   │   └── graph.py           # Neo4j graph service with Graphiti
 │   ├── main.py                # FastAPI application and endpoints
 │   └── webhook.py             # Telegram webhook configuration
@@ -590,6 +677,7 @@ We welcome contributions from everyone! To get started:
 
 - `GET /health`: Returns API status and message
 - `POST /telegram`: Receives Telegram webhook updates
+- `POST /api/v1/graph/query`: Query the knowledge graph (requires API key authentication)
 
 ### Logging & Monitoring
 
