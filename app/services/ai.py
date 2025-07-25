@@ -22,9 +22,10 @@ class AiService:
     This service provides AI-powered capabilities for TowerBot including:
     - Memory-enabled conversation agents for direct messages
     - Specialized command handlers for /ask, /connect, and /request commands
-    - Session management for conversation continuity
-    - Integration with LangChain tools and agents
-    - Supply request processing through BerlinHouse API integration
+    - Session management for conversation continuity with 24-hour TTL
+    - Integration with LangChain tools and LangMem memory systems
+    - LangSmith observability for LLM tracing and analytics
+    - Dynamic agent creation with tool-specific configurations
     """
     def __init__(self):
         self.bot = None
@@ -42,7 +43,7 @@ class AiService:
         """
         self.llm = llm
         self.bot = create_react_agent(
-            name="TowerBot",
+            name="General",
             model=self.llm,
             tools=[
                 *get_connect_agent_tools(),
@@ -191,3 +192,5 @@ class AiService:
         )
 
         return response["messages"][-1].content
+
+ai_service = AiService()

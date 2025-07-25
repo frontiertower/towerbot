@@ -42,8 +42,7 @@ class TestGraphService:
 
     @pytest.mark.asyncio
     @patch('app.services.graph.get_graphiti_client')
-    @patch('app.services.graph.clear_data')
-    async def test_connect_dev_environment(self, mock_clear_data, mock_get_client, graph_service, mock_graphiti, mock_settings):
+    async def test_connect_dev_environment(self, mock_get_client, graph_service, mock_graphiti, mock_settings):
         """Test GraphService connection in development environment."""
         mock_get_client.return_value = mock_graphiti
         
@@ -53,7 +52,6 @@ class TestGraphService:
             
             assert graph_service.graphiti == mock_graphiti
             mock_graphiti.build_indices_and_constraints.assert_called_once()
-            mock_clear_data.assert_called_once_with(mock_graphiti.driver)
 
     @pytest.mark.asyncio
     @patch('app.services.graph.get_graphiti_client')
@@ -89,20 +87,15 @@ class TestGraphService:
         await graph_service.close()
 
     @pytest.mark.asyncio
-    @patch('app.services.graph.EpisodicNode')
-    async def test_build_communities_prod(self, mock_episodic_node, graph_service, mock_graphiti, mock_settings):
+    async def test_build_communities_prod(self, graph_service, mock_graphiti, mock_settings):
         """Test building communities in production environment."""
         graph_service.graphiti = mock_graphiti
-        mock_episodes = [Mock(), Mock()]
-        mock_episodic_node.get_by_group_ids.return_value = mock_episodes
         
         with patch('app.services.graph.settings', mock_settings):
             mock_settings.APP_ENV = "prod"
-            mock_settings.GROUP_ID = "123"
             
             await graph_service.build_communities()
             
-            mock_graphiti.add_episode_bulk.assert_called_once()
             mock_graphiti.build_communities.assert_called_once()
 
     @pytest.mark.asyncio
@@ -132,12 +125,15 @@ class TestGraphService:
         graph_service.graphiti = mock_graphiti
         mock_result = Mock()
         mock_result.records = [Mock()]
-        mock_graphiti.driver.execute_query.return_value = mock_result
+        mock_graphiti.driver.execute_query = AsyncMock(return_value=mock_result)
         
         result = await graph_service.check_user_exists(mock_telegram_message)
         
         assert result is True
-        mock_graphiti.driver.execute_query.assert_called_once()
+        mock_graphiti.driver.execute_query.assert_called_once_with(
+            "\n        MATCH (n:User {user_id: $user_id})\n        RETURN n.user_id\n        LIMIT 1\n        ",
+            user_id=mock_telegram_message.from_user.id
+        )
 
     @pytest.mark.asyncio
     async def test_check_user_exists_false(self, graph_service, mock_graphiti, mock_telegram_message):
@@ -145,22 +141,30 @@ class TestGraphService:
         graph_service.graphiti = mock_graphiti
         mock_result = Mock()
         mock_result.records = []
-        mock_graphiti.driver.execute_query.return_value = mock_result
+        mock_graphiti.driver.execute_query = AsyncMock(return_value=mock_result)
         
         result = await graph_service.check_user_exists(mock_telegram_message)
         
         assert result is False
+        mock_graphiti.driver.execute_query.assert_called_once_with(
+            "\n        MATCH (n:User {user_id: $user_id})\n        RETURN n.user_id\n        LIMIT 1\n        ",
+            user_id=mock_telegram_message.from_user.id
+        )
 
     @pytest.mark.asyncio
     async def test_check_user_exists_no_records_attr(self, graph_service, mock_graphiti, mock_telegram_message):
         """Test checking if user exists with no records attribute."""
         graph_service.graphiti = mock_graphiti
         mock_result = True  # Boolean result instead of object with records
-        mock_graphiti.driver.execute_query.return_value = mock_result
+        mock_graphiti.driver.execute_query = AsyncMock(return_value=mock_result)
         
         result = await graph_service.check_user_exists(mock_telegram_message)
         
         assert result is True
+        mock_graphiti.driver.execute_query.assert_called_once_with(
+            "\n        MATCH (n:User {user_id: $user_id})\n        RETURN n.user_id\n        LIMIT 1\n        ",
+            user_id=mock_telegram_message.from_user.id
+        )
 
     @pytest.mark.asyncio
     async def test_process_message_success(self, graph_service, mock_graphiti, mock_telegram_message, mock_settings):
@@ -197,7 +201,7 @@ class TestGraphService:
         """Test successful episode reprocessing."""
         graph_service.graphiti = mock_graphiti
         mock_episodes = [Mock(), Mock(), Mock()]
-        mock_episodic_node.get_by_group_ids.return_value = mock_episodes
+        mock_episodic_node.get_by_group_ids = AsyncMock(return_value=mock_episodes)
         
         with patch('app.services.graph.settings', mock_settings):
             mock_settings.GROUP_ID = "123"

@@ -31,10 +31,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 TowerBot uses a **multi-layered AI agent system** with **temporal knowledge graph** processing:
 
 1. **FastAPI Application Layer** (`app/main.py`): HTTP endpoints for health checks and Telegram webhooks
-2. **Telegram Bot Layer** (`app/core/lifespan.py`): Message processing and authentication
+2. **Telegram Bot Layer** (`app/core/lifespan.py`): Message processing and multi-tier authentication
 3. **AI Agent Layer** (`app/services/ai.py`): Specialized agents for different command types
 4. **Knowledge Graph Layer** (`app/services/graph.py`): Graphiti-powered temporal graph operations
-5. **Tools Layer** (`app/core/tools.py`): External API integrations and search capabilities
+5. **Authentication Layer** (`app/services/auth.py`): API key validation and security services
+6. **Tools Layer** (`app/core/tools.py`): External API integrations and search capabilities
 
 ### Key Services Architecture
 
