@@ -98,7 +98,8 @@ class AiService:
 
         response = await agent_executor.ainvoke({
                 "input": message,
-                "chat_history": []
+                "chat_history": [],
+                "system_time": datetime.now()
             })
 
         return response.get("output")
@@ -120,7 +121,8 @@ class AiService:
 
         response = await agent_executor.ainvoke({
                 "input": message,
-                "chat_history": []
+                "chat_history": [],
+                "system_time": datetime.now()
             })
 
         return response.get("output")
@@ -147,7 +149,8 @@ class AiService:
 
         response = await agent_executor.ainvoke({
                 "input": message,
-                "chat_history": []
+                "chat_history": [],
+                "system_time": datetime.now()
             })
 
         return response.get("output")
