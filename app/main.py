@@ -7,11 +7,14 @@ system, which processes Telegram updates and provides health monitoring endpoint
 import logging
 
 from telegram import Update
+from starlette.routing import Mount
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, BackgroundTasks
+from mcp.server.sse import SseServerTransport
+from fastapi import FastAPI, Request, BackgroundTasks, Depends
 
-from app.api.graph import graph_router
 from app.core.lifespan import lifespan
+from app.services.auth import auth_service
+from app.mcp.graph import mcp as graph_mcp
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,11 +31,13 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="TowerBot", lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
+
+sse = SseServerTransport("/messages/")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app.include_router(graph_router)
+app.router.routes.append(Mount("/messages", app=sse.handle_post_message))
 
 async def process_telegram_update(tg_app, update_data):
     """Process a Telegram update in the background.
@@ -85,3 +90,16 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
     except Exception as e:
         logger.error(f"Failed to handle Telegram update: {e}")
         raise
+
+@app.get("/sse", tags=["MCP"], dependencies=[Depends(auth_service.require_api_key)])
+async def handle_sse(request: Request):
+    async with sse.connect_sse(request.scope, request.receive, request._send) as (
+        read_stream,
+        write_stream,
+    ):
+        init_options = graph_mcp._mcp_server.create_initialization_options()
+        await graph_mcp._mcp_server.run(
+            read_stream,
+            write_stream,
+            init_options,
+        )
