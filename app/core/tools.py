@@ -10,12 +10,9 @@ import httpx
 import logging
 
 from pathlib import Path
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
 from langchain_core.tools import tool
-from langchain_openai import AzureChatOpenAI
 from graphiti_core.search.search_filters import SearchFilters
 from graphiti_core.search.search_config_recipes import (
     COMBINED_HYBRID_SEARCH_MMR,
@@ -62,66 +59,29 @@ This dictionary maps the SearchRecipeEnum values to their actual Graphiti search
 configuration objects for use in graph search operations.
 """
 
-async def summarize_calendar_events(events: dict[str, Any], llm: AzureChatOpenAI):
+@tool("get_calendar_events", parse_docstring=True)
+async def get_calendar_events():
     """
-    Summarize a dictionary of events using an LLM, highlighting those relevant for today (US Pacific time).
-
-    Args:
-        events (dict[str, Any]): The events data in JSON/dict format.
+    Retrieve all future events from the Luma calendar API and summarize them using an LLM.
 
     Returns:
-        str: The LLM-generated summary of the events, focusing on today's important or relevant events.
+        str: A summary of future events, with emphasis on those relevant for today (US Pacific time).
+
+    Raises:
+        Exception: If the Luma API is unavailable or returns an error.
     """
-    pacific_tz = ZoneInfo("America/Los_Angeles")
-    pacific_date = datetime.now(pacific_tz).strftime('%Y-%m-%d')
-
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a helpful assistant. "
-                "Given a list of calendar events in JSON format, summarize the events for the user. "
-                "Highlight any events that are relevant or important for today ({date}) in the US Pacific timezone. "
-                "If there are no relevant events, say so. "
-                "Be concise and clear."
-            ).format(date=pacific_date),
-        },
-        {
-            "role": "user",
-            "content": f"Here are the events in JSON:\n{events}",
-        },
-    ]
-
-    ai_msg = await llm.ainvoke(messages)
-    return ai_msg.content
-
-
-def get_calendar_events_tool(llm: AzureChatOpenAI):
-    @tool("get_calendar_events", parse_docstring=True)
-    async def get_calendar_events():
-        """
-        Retrieve all future events from the Luma calendar API and summarize them using an LLM.
-
-        Returns:
-            str: A summary of future events, with emphasis on those relevant for today (US Pacific time).
-
-        Raises:
-            Exception: If the Luma API is unavailable or returns an error.
-        """
-        url = "https://api.lu.ma/calendar/get-items?calendar_api_id=cal-Sl7q1nHTRXQzjP2&period=future"
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                events = response.json()
-                return await summarize_calendar_events(events, llm)
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Luma API HTTP error: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
-        except httpx.RequestError as e:
-            logger.error(f"Luma API request error: {e}")
-            raise Exception(f"API Request Error: {e}") from e
-    return get_calendar_events
+    url = "https://api.lu.ma/calendar/get-items?calendar_api_id=cal-Sl7q1nHTRXQzjP2&period=future"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Luma API HTTP error: {e.response.status_code} - {e.response.text}")
+        raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
+    except httpx.RequestError as e:
+        logger.error(f"Luma API request error: {e}")
+        raise Exception(f"API Request Error: {e}") from e
 
 @tool("get_tower_communities", parse_docstring=True)
 async def get_tower_communities(search: Optional[str] = None):
@@ -157,7 +117,7 @@ async def get_tower_communities(search: Optional[str] = None):
     except httpx.RequestError as e:
         logger.error(f"BerlinHouse communities API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
-    
+
 
 @tool("create_supply_request", parse_docstring=True)
 async def create_supply_request(item: str, additional_info: Optional[str] = None):
@@ -265,7 +225,7 @@ async def get_connections(
     )
 
 
-def get_qa_agent_tools(llm: AzureChatOpenAI):
+def get_qa_agent_tools():
     """Get the list of tools available to the QA agent.
     
     Args:
@@ -276,8 +236,8 @@ def get_qa_agent_tools(llm: AzureChatOpenAI):
     """
     return [
         get_tower_info,
+        get_calendar_events,
         get_tower_communities,
-        get_calendar_events_tool(llm),
     ]
 
 def get_connect_agent_tools():

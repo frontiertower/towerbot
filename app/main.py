@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request, BackgroundTasks, Depends
 
 from app.core.lifespan import lifespan
 from app.services.auth import auth_service
-from app.mcp.graph import mcp as graph_mcp
+from app.mcp.tower import mcp as tower_mcp
 
 logging.basicConfig(
     level=logging.INFO,
@@ -91,14 +91,26 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
         logger.error(f"Failed to handle Telegram update: {e}")
         raise
 
-@app.get("/sse", tags=["MCP"], dependencies=[Depends(auth_service.require_api_key)])
+@app.api_route("/sse", methods=["GET", "POST"], tags=["MCP"], dependencies=[Depends(auth_service.require_api_key)])
 async def handle_sse(request: Request):
+    """
+    SSE endpoint for MCP server.
+
+    This endpoint establishes a Server-Sent Events (SSE) connection for the MCP (Multi-Channel Processor)
+    server, allowing real-time bidirectional communication with authenticated clients. Requires a valid API key.
+
+    Args:
+        request (Request): The incoming HTTP request.
+
+    Returns:
+        Streaming response for SSE communication.
+    """
     async with sse.connect_sse(request.scope, request.receive, request._send) as (
         read_stream,
         write_stream,
     ):
-        init_options = graph_mcp._mcp_server.create_initialization_options()
-        await graph_mcp._mcp_server.run(
+        init_options = tower_mcp._mcp_server.create_initialization_options()
+        await tower_mcp._mcp_server.run(
             read_stream,
             write_stream,
             init_options,

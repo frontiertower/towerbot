@@ -46,8 +46,8 @@ class AiService:
             name="General",
             model=self.llm,
             tools=[
+                *get_qa_agent_tools(),
                 *get_connect_agent_tools(),
-                *get_qa_agent_tools(self.llm),
                 create_manage_memory_tool(namespace=("memories", "{user_id}"), store=store),
                 create_search_memory_tool(namespace=("memories", "{user_id}"), store=store),
             ],
@@ -91,7 +91,7 @@ class AiService:
         Returns:
             str: AI-generated response to the user's question
         """
-        tools = get_qa_agent_tools(self.llm)
+        tools = get_qa_agent_tools()
         prompt = self.client.pull_prompt("towerbot-ask")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
