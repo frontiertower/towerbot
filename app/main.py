@@ -91,9 +91,6 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
         logger.error(f"Failed to handle Telegram update: {e}")
         raise
 
-@app.post("/messages", dependencies=[Depends(auth_service.require_api_key)])
-async def post_messages(request: Request):
-    return await sse.handle_post_message(request.scope, request.receive, request._send)
 
 @app.api_route("/sse", methods=["GET", "POST"], tags=["MCP"], dependencies=[Depends(auth_service.require_api_key)])
 async def handle_sse(request: Request):
