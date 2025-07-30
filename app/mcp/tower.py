@@ -24,7 +24,7 @@ async def query_graph(query: str) -> list[dict[str, Any]]:
 
         filtered_results = []
         for result in results:
-            filtered_result = {k: v for k, v in result if k != "attributes"}
+            filtered_result = {k: v for k, v in result.items() if k != "attributes"}
             filtered_results.append(filtered_result)
         
         return filtered_results
