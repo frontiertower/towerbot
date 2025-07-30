@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(lifespan=lifespan)
 
-sse = SseServerTransport("/messages")
+sse = SseServerTransport("/messages/")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -90,7 +90,6 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
     except Exception as e:
         logger.error(f"Failed to handle Telegram update: {e}")
         raise
-
 
 @app.api_route("/sse", methods=["GET", "POST"], tags=["MCP"], dependencies=[Depends(auth_service.require_api_key)])
 async def handle_sse(request: Request):
