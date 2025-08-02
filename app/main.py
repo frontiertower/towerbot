@@ -5,12 +5,13 @@ system, which processes Telegram updates and provides health monitoring endpoint
 """
 
 import logging
+import asyncio
 
 from telegram import Update
 from starlette.routing import Mount
 from fastapi.staticfiles import StaticFiles
 from mcp.server.sse import SseServerTransport
-from fastapi import FastAPI, Request, BackgroundTasks, Depends
+from fastapi import FastAPI, Request, BackgroundTasks, Depends, HTTPException, status
 
 from app.core.lifespan import lifespan
 from app.services.auth import auth_service
@@ -91,7 +92,12 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
         logger.error(f"Failed to handle Telegram update: {e}")
         raise
 
-@app.api_route("/sse", methods=["GET", "POST"], tags=["MCP"], dependencies=[Depends(auth_service.require_api_key)])
+@app.api_route(
+    "/sse",
+    methods=["GET", "POST"],
+    tags=["MCP"],
+    dependencies=[Depends(auth_service.require_api_key)],
+)
 async def handle_sse(request: Request):
     """
     SSE endpoint for MCP server.
@@ -105,7 +111,19 @@ async def handle_sse(request: Request):
     Returns:
         Streaming response for SSE communication.
     """
-    async with sse.connect_sse(request.scope, request.receive, request._send) as (
+    for _ in range(30):
+        if request.app.state.is_initialized:
+            break
+        await asyncio.sleep(1)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Services did not initialize in time.",
+        )
+
+    async with sse.connect_sse(
+        request.scope, request.receive, request._send
+    ) as (
         read_stream,
         write_stream,
     ):
