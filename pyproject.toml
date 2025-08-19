@@ -20,8 +20,6 @@ dependencies = [
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "python-telegram-bot>=22.2",
-    "scorecard-ai>=3.0.0",
-    "traceloop-sdk>=0.44.1",
     "uvicorn>=0.35.0",
 ]
 
