@@ -10,6 +10,7 @@ from telegram import Update
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks
 
+from app.api.graph import graph_router
 from app.core.lifespan import lifespan
 
 logging.basicConfig(
@@ -27,9 +28,16 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="TowerBot API",
+    description="API for querying TowerBot's temporal knowledge graph",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.include_router(graph_router, include_in_schema=True)
 
 async def process_telegram_update(tg_app, update_data):
     """Process a Telegram update in the background.
@@ -47,7 +55,7 @@ async def process_telegram_update(tg_app, update_data):
         logger.error(f"Failed to process Telegram update: {e}")
         raise
 
-@app.get("/health")
+@app.get("/health", include_in_schema=False)
 def check_health():
     """Health check endpoint for monitoring service status.
     
@@ -57,7 +65,7 @@ def check_health():
     logger.info("Health check requested")
     return {"status": "ok", "message": "TowerBot is running"}
 
-@app.post("/telegram")
+@app.post("/telegram", include_in_schema=False)
 async def handle_telegram_update(request: Request, background_tasks: BackgroundTasks):
     """Handle incoming Telegram webhook updates.
     
