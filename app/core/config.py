@@ -92,6 +92,7 @@ class Settings(BaseSettings):
         - Invalid configurations will be logged and handled gracefully
         - Bot will automatically leave unauthorized groups
     """
+    ALLOWED_GROUP_IDS: str = ""
     APP_ENV: str = "dev"
     AZURE_OPENAI_API_KEY: str
     AZURE_OPENAI_ENDPOINT: str
@@ -101,12 +102,10 @@ class Settings(BaseSettings):
     DEFAULT_DATABASE: str
     EMBEDDING_MODEL: str
     GROUP_ID: str
-    ALLOWED_GROUP_IDS: str = ""
-    SOULINK_ENABLED: bool = False
-    SOULINK_ADMIN_ID: str = ""
     LANGSMITH_API_KEY: str
     LANGSMITH_PROJECT: str
     LANGSMITH_TRACING: bool = True
+    LANGSMITH_OTEL_ENABLED: bool = True
     MODEL: str
     NEO4J_PASSWORD: str
     NEO4J_URI: str
@@ -116,6 +115,10 @@ class Settings(BaseSettings):
     POSTGRES_CONN_STRING: str
     REASONING_MODEL: str
     RERANKER_MODEL: str
+    SOULINK_ADMIN_ID: str = ""
+    SOULINK_ENABLED: bool = False
+    TRACELOOP_BASE_URL: str
+    TRACELOOP_HEADERS: str
     WEBHOOK_URL: str
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')

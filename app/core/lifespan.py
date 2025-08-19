@@ -439,11 +439,9 @@ async def initialize_services(app: FastAPI):
         app.state.auth_service = auth_service
         app.state.tg_app = tg_app
         app.state.scheduler = scheduler
-        app.state.is_initialized = True
         logger.info("Background service initialization complete.")
     except Exception as e:
         logger.error(f"Background service initialization failed: {e}")
-        app.state.is_initialized = False
         raise
 
 
@@ -451,7 +449,6 @@ async def initialize_services(app: FastAPI):
 async def lifespan(app: FastAPI):
     """Application lifespan context manager for TowerBot."""
     logger.info("Application startup sequence initiated...")
-    app.state.is_initialized = False
     initialization_task = asyncio.create_task(initialize_services(app))
 
     try:

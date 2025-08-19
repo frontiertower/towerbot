@@ -5,17 +5,13 @@ system, which processes Telegram updates and provides health monitoring endpoint
 """
 
 import logging
-import asyncio
 
 from telegram import Update
-from starlette.routing import Mount
 from fastapi.staticfiles import StaticFiles
-from mcp.server.sse import SseServerTransport
-from fastapi import FastAPI, Request, BackgroundTasks, Depends, HTTPException, status
+from fastapi import FastAPI, Request, BackgroundTasks
 
+from app.api.graph import graph_router
 from app.core.lifespan import lifespan
-from app.services.auth import auth_service
-from app.mcp.tower import mcp as tower_mcp
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,13 +28,16 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(lifespan=lifespan)
-
-sse = SseServerTransport("/messages/")
+app = FastAPI(
+    title="TowerBot API",
+    description="API for querying TowerBot's temporal knowledge graph",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-app.router.routes.append(Mount("/messages", app=sse.handle_post_message))
+app.include_router(graph_router, include_in_schema=True)
 
 async def process_telegram_update(tg_app, update_data):
     """Process a Telegram update in the background.
@@ -56,7 +55,7 @@ async def process_telegram_update(tg_app, update_data):
         logger.error(f"Failed to process Telegram update: {e}")
         raise
 
-@app.get("/health")
+@app.get("/health", include_in_schema=False)
 def check_health():
     """Health check endpoint for monitoring service status.
     
@@ -66,7 +65,7 @@ def check_health():
     logger.info("Health check requested")
     return {"status": "ok", "message": "TowerBot is running"}
 
-@app.post("/telegram")
+@app.post("/telegram", include_in_schema=False)
 async def handle_telegram_update(request: Request, background_tasks: BackgroundTasks):
     """Handle incoming Telegram webhook updates.
     
@@ -91,45 +90,3 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
     except Exception as e:
         logger.error(f"Failed to handle Telegram update: {e}")
         raise
-
-@app.api_route(
-    "/sse",
-    methods=["GET", "POST"],
-    tags=["MCP"],
-    dependencies=[Depends(auth_service.require_api_key)],
-)
-async def handle_sse(request: Request):
-    """
-    SSE endpoint for MCP server.
-
-    This endpoint establishes a Server-Sent Events (SSE) connection for the MCP (Multi-Channel Processor)
-    server, allowing real-time bidirectional communication with authenticated clients. Requires a valid API key.
-
-    Args:
-        request (Request): The incoming HTTP request.
-
-    Returns:
-        Streaming response for SSE communication.
-    """
-    for _ in range(30):
-        if request.app.state.is_initialized:
-            break
-        await asyncio.sleep(1)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Services did not initialize in time.",
-        )
-
-    async with sse.connect_sse(
-        request.scope, request.receive, request._send
-    ) as (
-        read_stream,
-        write_stream,
-    ):
-        init_options = tower_mcp._mcp_server.create_initialization_options()
-        await tower_mcp._mcp_server.run(
-            read_stream,
-            write_stream,
-            init_options,
-        )
