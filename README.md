@@ -412,6 +412,7 @@ uv pip install --system  # ensure uv is set up for your Python
 uv sync  # install all dependencies from pyproject.toml
 ```
 
+
 ### 2. Environment Setup
 
 Create a `.env` file in the root directory with the following variables:
@@ -456,7 +457,7 @@ LANGSMITH_PROJECT=your-langsmith-project      # LangSmith project name
 LANGSMITH_TRACING=true                        # Enable LangSmith tracing
 ```
 
-### 3. Run Locally
+### 4. Run Locally
 
 You can use the provided startup script to launch both the webhook and the FastAPI app:
 
@@ -473,7 +474,7 @@ uv run uvicorn app.main:app --reload --port 3000 --host 0.0.0.0
 
 The Telegram bot will start automatically as a background task.
 
-### 4. Add to Telegram Group
+### 5. Add to Telegram Group
 
 - Add your bot to a Telegram group.
 - Use `/ask` or `/connect` to interact with the bot.
@@ -743,3 +744,159 @@ LANGSMITH_TRACING=true
 TowerBot is open source and licensed under the [MIT License](LICENSE).
 
 You are free to use, modify, and distribute this software for commercial and non-commercial purposes, subject to the terms of the MIT License.
+
+
+# Instructions from debug session
+Of course\! Based on the transcript, here is a detailed setup guide for the automation bot package, covering all the prerequisites, configurations, code modifications, and troubleshooting steps you discussed.
+
+## **Bot Setup and Configuration Guide**
+
+This guide will walk you through setting up the bot on your local machine. We'll cover everything from installing dependencies and setting up the database to configuring environment variables and running the application.
+
+-----
+
+### **1. Prerequisites**
+
+Before you begin, make sure you have the following tools installed on your system:
+
+  * **UV**: A fast Python package installer and resolver.
+  * **Docker**: For running a local Postgres database instance. Make sure the Docker daemon is running.
+  * **Ngrok**: A tool to expose your local server to the internet, which is necessary for Telegram webhooks. You'll need a free account to claim a static domain.
+
+You can install `ngrok` using Homebrew if you're on a Mac:
+
+```bash
+brew install ngrok
+```
+
+-----
+
+### **2. Initial Project Setup**
+
+1.  **Clone the Repository**: Start by getting the code onto your local machine.
+2.  **Install Dependencies**: Navigate to the root directory of the project in your terminal and run the following command to install all the required Python packages:
+    ```bash
+    uv sync
+    ```
+
+-----
+
+### **3. Environment Configuration (`.env` file)**
+
+Create a file named `.env` in the root directory of the project. This file will hold all your secret keys and configuration variables.
+
+#### **Telegram Setup**
+
+1.  **Create a Bot**: Talk to the **BotFather** on Telegram to create a new bot. It will give you a unique `TELEGRAM_BOT_TOKEN`.
+2.  **Create a Test Group**: Create a new Telegram group for testing.
+3.  **Get Group ID**: To find your group's ID, you can temporarily add a bot like `@myidbot` to the group, which will post the group's ID. It will be a negative number.
+4.  **Add Variables to `.env`**:
+    ```env
+    # From BotFather
+    TELEGRAM_BOT_TOKEN="your_telegram_bot_token_here"
+
+    # The ID of your test group (must be a negative number)
+    ALLOWED_GROUP_IDS="your_group_id_here"
+
+    # Your personal Telegram user ID for admin privileges
+    ADMIN_USER_IDS="your_personal_telegram_id"
+    ```
+
+#### **OpenAI and LangSmith Setup**
+
+1.  **Get Keys**: You'll need an API key from **OpenAI** and another from **LangSmith** (for tracing and observability).
+2.  **Add Variables to `.env`**:
+    ```env
+    # Your OpenAI API Key
+    OPENAI_API_KEY="sk-..."
+
+    # Your LangSmith API Key for tracing
+    LANGSMITH_API_KEY="ls__..."
+    LANGCHAIN_TRACING_V2="true"
+    LANGCHAIN_PROJECT="Default" # Or any project name you prefer
+    ```
+
+### 2. Database Setup
+
+#### PostgreSQL with pgvector
+
+TowerBot requires PostgreSQL with the pgvector extension for vector embeddings and memory storage.
+
+**Setup Commands:**
+
+```bash
+# Stop and remove any existing PostgreSQL container (if needed)
+docker stop postgres-towerbot-2 && docker rm postgres-towerbot-2
+
+# Run PostgreSQL with pgvector extension
+docker run --name postgres-towerbot-2 \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5436:5432 \
+  -d pgvector/pgvector:pg17
+
+# Wait for container to start
+sleep 3
+
+# Create the towerbot database
+PGPASSWORD=postgres psql -h localhost -p 5436 -U postgres \
+  -c "CREATE DATABASE towerbot;"
+
+# Enable pgvector extension for vector embeddings
+PGPASSWORD=postgres psql -h localhost -p 5436 -U postgres -d towerbot \
+  -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+# Verify pgvector installation
+PGPASSWORD=postgres psql -h localhost -p 5436 -U postgres -d towerbot \
+  -c "SELECT * FROM pg_extension WHERE extname = 'vector';"
+```
+
+**Connection String for .env:**
+```
+POSTGRES_CONN_STRING=postgresql://postgres:postgres@localhost:5436/towerbot
+```
+
+
+
+#### **Ngrok Webhook Setup**
+
+1.  **Claim a Static Domain**: Log in to your `ngrok` dashboard and claim a free static domain. It will look something like `your-choice-123.ngrok-free.app`.
+2.  **Add Webhook URL to `.env`**:
+    ```env
+    # Your static ngrok domain
+    WEBHOOK_URL="https://your-choice-123.ngrok-free.app"
+    ```
+
+-----
+
+### **5. Running the Application**
+
+1.  **Start Ngrok**: Open a new terminal window and run the following command to start tunneling your local port `3000` (the default for the app) to your public `ngrok` URL.
+
+    ```bash
+    ngrok http --domain=your-choice-123.ngrok-free.app 3000
+    ```
+
+    Leave this terminal window running.
+
+2.  **Start the Bot Server**: In another terminal window, navigate to the project's root directory and run the startup script:
+
+    ```bash
+    ./startup.sh
+    ```
+
+3.  **Add Bot to Group as Admin**:
+
+      * Go to your test Telegram group.
+      * Add the bot you created as a member.
+      * Promote the bot to an **admin**. This is a critical step, as the bot needs admin permissions to read messages in the group.
+
+The server should now be running, connected to the database, and receiving webhooks from Telegram via `ngrok`.
+
+-----
+
+### **6. Final Testing and Troubleshooting**
+
+  * **Initial Interaction**: Send a message (e.g., "Hello") in your test group. You should see activity in the terminal where `./startup.sh` is running, indicating that the bot has processed the message and added you as a user node to the graph.
+  * **Direct Message**: Once you've sent a message in the group, you should be whitelisted and can now message the bot directly. Try sending it a query like, "Connect me with someone interested in AI agents."
+  * **"Bad Gateway" Error**: If you see a `502 Bad Gateway` error in the `ngrok` terminal, it likely means the port number in your `ngrok` command doesn't match the port the application server is running on. The script uses port `3000`, so make sure your `ngrok` command also specifies port `3000`.
+  * **Authentication Issues**: If the bot tells you you're not authorized even after messaging the group, ensure the bot was successfully promoted to an admin in the group. Without admin rights, it cannot see your messages and therefore cannot add you to the knowledge graph.

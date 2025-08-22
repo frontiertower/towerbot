@@ -10,12 +10,13 @@ import logging
 from datetime import timezone
 
 from graphiti_core import Graphiti
-from openai import AsyncAzureOpenAI
+from openai import AsyncOpenAI
 from telegram import Message as TelegramMessage
 from graphiti_core.nodes import EpisodeType, EpisodicNode
 from graphiti_core.llm_client import LLMConfig, OpenAIClient
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
+from graphiti_core.utils.maintenance.graph_data_operations import clear_data
 
 from app.core.config import settings
 from app.schemas.generated_enums import EDGE_TYPE_MAP, NodeTypeEnum, EdgeTypeEnum
@@ -29,62 +30,20 @@ logger = logging.getLogger(__name__)
 def get_graphiti_client():
     """Create and configure a Graphiti client instance.
     
-    Initializes a Graphiti client with Azure OpenAI services for LLM operations,
+    Initializes a Graphiti client with OpenAI services for LLM operations,
     embeddings, and cross-encoding, along with Neo4j database connectivity.
     
     Returns:
         Graphiti: Configured Graphiti client instance
     """
-    api_key = settings.AZURE_OPENAI_API_KEY
-    api_version = "2024-12-01-preview"
-    llm_endpoint = settings.AZURE_OPENAI_ENDPOINT
-    embedding_endpoint = settings.AZURE_OPENAI_ENDPOINT
-
     neo4j_uri = settings.NEO4J_URI
     neo4j_user = settings.NEO4J_USER
     neo4j_password = settings.NEO4J_PASSWORD
 
-    llm_small_model = settings.RERANKER_MODEL
-    llm_model = settings.MODEL
-    embedding_model = settings.EMBEDDING_MODEL
-
-    llm_client_azure = AsyncAzureOpenAI(
-        api_key=api_key,
-        api_version=api_version,
-        azure_endpoint=llm_endpoint
-    )
-
-    embedding_client_azure = AsyncAzureOpenAI(
-        api_key=api_key,
-        api_version=api_version,
-        azure_endpoint=embedding_endpoint
-    )
-
-    azure_llm_config = LLMConfig(
-        small_model=llm_small_model,
-        model=llm_model,
-    )
-
     return Graphiti(
         neo4j_uri,
         neo4j_user,
-        neo4j_password,
-        llm_client=OpenAIClient(
-            config=azure_llm_config,
-            client=llm_client_azure
-        ),
-        embedder=OpenAIEmbedder(
-            config=OpenAIEmbedderConfig(
-                embedding_model=embedding_model
-            ),
-            client=embedding_client_azure
-        ),
-        cross_encoder=OpenAIRerankerClient(
-            config=LLMConfig(
-                model=azure_llm_config.small_model
-            ),
-            client=llm_client_azure
-        )
+        neo4j_password
     )
 
 class GraphService:
@@ -135,6 +94,8 @@ class GraphService:
         try:
             self.graphiti = get_graphiti_client()
             logger.info("Graph service connected to Graphiti")
+            # Clears the whole database. Only needed for a bug with node, don't clear everytime
+            # await clear_data(self.graphiti.driver)
             await self.graphiti.build_indices_and_constraints()
         except Exception as e:
             logger.error(f"Failed to connect to graph service: {e}")
@@ -210,7 +171,6 @@ class GraphService:
                 excluded_entity_types=["Topic", "Floor"],
                 edge_types=self.edge_types,
                 edge_type_map=self.edge_type_map,
-                update_communities=True,
             )
         except Exception as e:
             logger.error(f"Failed to process message {message.message_id}: {e}")

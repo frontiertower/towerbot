@@ -236,7 +236,7 @@ class TestGraphService:
 class TestGetGraphitiClient:
     """Test cases for get_graphiti_client function."""
     
-    @patch('app.services.graph.AsyncAzureOpenAI')
+    @patch('app.services.graph.AsyncOpenAI')
     @patch('app.services.graph.Graphiti')
     @patch('app.services.graph.OpenAIClient')
     @patch('app.services.graph.OpenAIEmbedder')

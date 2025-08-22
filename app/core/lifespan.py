@@ -64,7 +64,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg.rows import dict_row
@@ -405,8 +405,7 @@ async def initialize_services(app: FastAPI):
     global pool, store, checkpointer
     logger.info("Background service initialization started...")
     try:
-        llm = AzureChatOpenAI(api_version="2024-12-01-preview",
-                              azure_deployment=settings.MODEL)
+        llm = ChatOpenAI(model=settings.MODEL)
 
         pool = AsyncConnectionPool(conninfo=settings.POSTGRES_CONN_STRING,
                                  max_size=20,
@@ -419,7 +418,7 @@ async def initialize_services(app: FastAPI):
             pool,
             index={
                 "dims": 1536,
-                "embed": f"azure_openai:{settings.EMBEDDING_MODEL}"
+                "embed": f"openai:{settings.EMBEDDING_MODEL}"
             },
         )
         checkpointer = AsyncPostgresSaver(pool)

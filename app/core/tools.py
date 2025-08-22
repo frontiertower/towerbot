@@ -229,7 +229,7 @@ def get_qa_agent_tools():
     """Get the list of tools available to the QA agent.
     
     Args:
-        llm: Azure OpenAI language model instance
+        llm: OpenAI language model instance
         
     Returns:
         list: List of tools for the QA agent

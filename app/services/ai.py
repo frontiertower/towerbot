@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from langsmith import Client
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langgraph.store.postgres.base import BasePostgresStore
 from langgraph.checkpoint.postgres.base import BasePostgresSaver
@@ -30,14 +30,14 @@ class AiService:
     def __init__(self):
         self.bot = None
         self.client = Client()
-        self.llm: Optional[AzureChatOpenAI] = None
+        self.llm: Optional[ChatOpenAI] = None
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
 
-    def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
+    def connect(self, llm: ChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
         """Initialize the AI service with required components.
         
         Args:
-            llm: Azure OpenAI language model instance
+            llm: OpenAI language model instance
             store: PostgreSQL store for vector embeddings and memory
             checkpointer: PostgreSQL checkpointer for conversation state
         """
@@ -115,7 +115,7 @@ class AiService:
             str: AI-generated response with connection suggestions
         """
         tools = get_connect_agent_tools()
-        prompt = self.client.pull_prompt("towerbot-connect")
+        prompt = self.client.pull_prompt("totaylor/towerbot-connect")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
         agent_executor = AgentExecutor(name="Connect", agent=agent, tools=tools)
@@ -143,7 +143,7 @@ class AiService:
             str: AI-generated response regarding the supply request.
         """
         tools = get_request_agent_tools()
-        prompt = self.client.pull_prompt("towerbot-request")
+        prompt = self.client.pull_prompt("totaylor/towerbot-request")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
         agent_executor = AgentExecutor(name="Request", agent=agent, tools=tools)
@@ -169,7 +169,7 @@ class AiService:
         Returns:
             str: AI-generated conversational response
         """
-        prompt = self.client.pull_prompt("towerbot-general")
+        prompt = self.client.pull_prompt("totaylor/towerbot-general")
 
         messages = [
             {"role": "system", "content": prompt.messages[0].prompt.template.format(system_time=datetime.now())},

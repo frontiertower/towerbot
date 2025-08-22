@@ -57,8 +57,7 @@ class Settings(BaseSettings):
     Service Configuration:
         BOT_TOKEN: Telegram bot token (required)
         WEBHOOK_URL: Webhook URL for Telegram updates (required)
-        AZURE_OPENAI_API_KEY: Azure OpenAI service API key (required)
-        AZURE_OPENAI_ENDPOINT: Azure OpenAI service endpoint URL (required)
+        OPENAI_API_KEY: OpenAI API key (required)
         
     Database Configuration:
         POSTGRES_CONN_STRING: PostgreSQL connection string (required)
@@ -94,8 +93,7 @@ class Settings(BaseSettings):
     """
     ALLOWED_GROUP_IDS: str = ""
     APP_ENV: str = "dev"
-    AZURE_OPENAI_API_KEY: str
-    AZURE_OPENAI_ENDPOINT: str
+    OPENAI_API_KEY: str
     BERLINHOUSE_API_KEY: str
     BERLINHOUSE_BASE_URL: str
     BOT_TOKEN: str
