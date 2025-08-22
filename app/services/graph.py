@@ -210,7 +210,6 @@ class GraphService:
                 excluded_entity_types=["Topic", "Floor"],
                 edge_types=self.edge_types,
                 edge_type_map=self.edge_type_map,
-                update_communities=True,
             )
         except Exception as e:
             logger.error(f"Failed to process message {message.message_id}: {e}")

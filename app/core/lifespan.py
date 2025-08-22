@@ -275,8 +275,6 @@ def create_application():
 def start_scheduler():
     """Start the background task scheduler."""
     scheduler = BackgroundScheduler()
-    scheduler.add_job(graph_service.build_communities,
-                      CronTrigger(hour=0, minute=0))
     scheduler.start()
     logger.info("APScheduler started.")
     return scheduler
