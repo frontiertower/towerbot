@@ -92,7 +92,7 @@ class AiService:
             str: AI-generated response to the user's question
         """
         tools = get_qa_agent_tools()
-        prompt = self.client.pull_prompt("towerbot-ask")
+        prompt = self.client.pull_prompt("totaylor/towerbot-ask")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
         agent_executor = AgentExecutor(name="Ask", agent=agent, tools=tools)
@@ -115,7 +115,7 @@ class AiService:
             str: AI-generated response with connection suggestions
         """
         tools = get_connect_agent_tools()
-        prompt = self.client.pull_prompt("towerbot-connect")
+        prompt = self.client.pull_prompt("totaylor/towerbot-connect")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
         agent_executor = AgentExecutor(name="Connect", agent=agent, tools=tools)
@@ -143,7 +143,7 @@ class AiService:
             str: AI-generated response regarding the supply request.
         """
         tools = get_request_agent_tools()
-        prompt = self.client.pull_prompt("towerbot-request")
+        prompt = self.client.pull_prompt("totaylor/towerbot-request")
 
         agent = create_tool_calling_agent(self.llm, tools, prompt)
         agent_executor = AgentExecutor(name="Request", agent=agent, tools=tools)
@@ -169,7 +169,7 @@ class AiService:
         Returns:
             str: AI-generated conversational response
         """
-        prompt = self.client.pull_prompt("towerbot-general")
+        prompt = self.client.pull_prompt("totaylor/towerbot-general")
 
         messages = [
             {"role": "system", "content": prompt.messages[0].prompt.template.format(system_time=datetime.now())},
