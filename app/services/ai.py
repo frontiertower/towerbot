@@ -5,10 +5,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from langsmith import Client
-from traceloop.sdk import Traceloop
 from langchain_openai import AzureChatOpenAI
-from traceloop.sdk.decorators import workflow
-from traceloop.sdk.instruments import Instruments
 from langgraph.prebuilt import create_react_agent
 from langgraph.store.postgres.base import BasePostgresStore
 from langgraph.checkpoint.postgres.base import BasePostgresSaver
@@ -18,8 +15,6 @@ from langmem import create_manage_memory_tool, create_search_memory_tool
 from app.core.tools import get_qa_agent_tools, get_connect_agent_tools, get_request_agent_tools
 
 logger = logging.getLogger(__name__)
-
-Traceloop.init(disable_batch=True, instruments={Instruments.OPENAI})
 
 class AiService:
     """AI service for managing conversational agents and LLM interactions.
@@ -87,7 +82,6 @@ class AiService:
         }
         return thread_id
     
-    @workflow(name="handle_ask")
     async def handle_ask(self, message: str):
         """Handle /ask command using QA agent with specialized tools.
         
@@ -111,7 +105,6 @@ class AiService:
 
         return response.get("output")
     
-    @workflow(name="handle_connect")
     async def handle_connect(self, message: str):
         """Handle /connect command using connection agent with graph search tools.
         

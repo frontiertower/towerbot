@@ -105,7 +105,6 @@ class Settings(BaseSettings):
     LANGSMITH_API_KEY: str
     LANGSMITH_PROJECT: str
     LANGSMITH_TRACING: bool = True
-    LANGSMITH_OTEL_ENABLED: bool = True
     MODEL: str
     NEO4J_PASSWORD: str
     NEO4J_URI: str
@@ -117,8 +116,6 @@ class Settings(BaseSettings):
     RERANKER_MODEL: str
     SOULINK_ADMIN_ID: str = ""
     SOULINK_ENABLED: bool = False
-    TRACELOOP_BASE_URL: str
-    TRACELOOP_HEADERS: str
     WEBHOOK_URL: str
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
