@@ -54,7 +54,7 @@ class Event(BaseModel):
         label = "Event"
 
 class Interest(BaseModel):
-    title: str = Field(..., unique=True)
+    title: str = Field(None, description="Title of the interest.")
 
     class Config:
         label = "Interest"
