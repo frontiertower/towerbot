@@ -1,70 +1,10 @@
-"""Application lifespan management module for TowerBot.
-
-This module handles the complete startup and shutdown lifecycle of the TowerBot application,
-including initialization of services, Telegram bot setup, database connections, background
-task scheduling, and comprehensive multi-layered authentication system.
-
-Key Features:
-- Multi-layered authentication (Group membership + Soulink + BerlinHouse API)
-- Dynamic AI agent system with command-based and direct message processing
-- Robust error handling for Telegram API calls
-- Automatic unauthorized group detection and bot removal
-- Secure supergroup message processing
-- Debug logging and monitoring capabilities
-
-Authentication Flow:
-1. Group Membership: User must be in allowed Telegram groups
-2. Soulink (Optional): User must share at least one group with designated admin
-3. BerlinHouse API: User must be verified community member
-4. Command Processing: Only authorized users can execute bot commands
-5. Direct Messages: Full authentication for private chat conversations
-
-Message Processing:
-- Private Chats: Direct message processing using memory agent with full authentication
-- Supergroups: Knowledge graph extraction for authorized groups
-- Commands: AI-powered responses with specialized tools (/ask, /connect)
-- Commands require immediate context - no reply-based continuation
-
-Soulink Authentication System:
-Soulink is TowerBot's innovative "social proximity" authentication mechanism that creates
-a trust relationship based on shared group memberships. Named after the concept of a
-"soul connection," Soulink ensures users have some social bond with the bot administrator.
-
-How Soulink Works:
-- Admin sets their Telegram user ID in SOULINK_ADMIN_ID configuration
-- When enabled, users must share at least ONE Telegram group with the admin
-- Bot checks all groups where both user and admin are members
-- If any shared groups exist, user passes Soulink authentication
-- If no shared groups, user is denied access regardless of other permissions
-
-Soulink Benefits:
-- Social Validation: Ensures users have genuine social connection to admin
-- Dynamic Trust: Access automatically adjusts as group memberships change
-- Scalable Security: Works across multiple communities without hardcoding
-- Indirect Membership: Users don't need to be in the "main" group specifically
-
-Soulink Configuration:
-- SOULINK_ENABLED=true/false (default: false)
-- SOULINK_ADMIN_ID=<admin_telegram_user_id>
-- Works with existing GROUP_ID and ALLOWED_GROUP_IDS settings
-
-Security Features:
-- Input validation for all configuration values
-- Specific exception handling for different error types
-- Rate limiting detection and logging
-- Automatic bot removal from unauthorized groups
-- Comprehensive audit logging for all authentication attempts
-- Secure direct message processing with memory agent
-"""
 
 import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg.rows import dict_row
@@ -86,30 +26,18 @@ logger = logging.getLogger(__name__)
 
 
 def safe_user_log(user_id: int) -> str:
-    """Generate privacy-safe user identifier for logging.
-    In development: Returns full user ID for debugging
-    In production: Returns truncated hash for privacy
-    """
     if settings.APP_ENV == "dev":
         return str(user_id)
     return f"user_{str(user_id)[:4]}***"
 
 
 def safe_message_log(message_text: str) -> str:
-    """Generate privacy-safe message content for logging.
-    In development: Returns full message for debugging
-    In production: Returns truncated/sanitized version
-    """
     if settings.APP_ENV == "dev":
         return message_text
     return f"[{len(message_text)} chars]"
 
 
 def safe_update_log(update: Update) -> str:
-    """Generate privacy-safe update summary for logging.
-    In development: Returns full update object
-    In production: Returns sanitized summary
-    """
     if settings.APP_ENV == "dev":
         return str(update)
     return (
@@ -130,19 +58,12 @@ connection_kwargs = {
 
 
 def is_valid_text_message(update: Update):
-    """Check if an update contains a valid text message.
-    Args:
-        update: Telegram update object
-    Returns:
-        bool: True if the update contains a non-empty text message
-    """
     return bool(update.message and update.message.text and
                 update.message.text.strip())
 
 
 async def is_user_authorized(user_id: int,
                              context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if a user is authorized to interact with the bot."""
     logger.debug(f"Starting authorization check for user {user_id}")
     if not await is_user_in_allowed_groups(user_id, context):
         logger.debug(f"User {user_id} DENIED - not in allowed groups")
@@ -158,7 +79,6 @@ async def is_user_authorized(user_id: int,
 
 async def is_user_in_allowed_groups(user_id: int,
                                     context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if a user is a member of any allowed groups."""
     logger.debug(f"Checking allowed groups for user {user_id}")
     allowed_groups = set()
     if settings.GROUP_ID:
@@ -195,7 +115,6 @@ async def is_user_in_allowed_groups(user_id: int,
 
 async def get_user_groups(user_id: int,
                           context: ContextTypes.DEFAULT_TYPE) -> set:
-    """Get all groups that a user is a member of for Soulink authentication."""
     user_groups = set()
     known_groups = set()
 
@@ -231,7 +150,6 @@ async def get_user_groups(user_id: int,
 
 async def has_soulink_access(user_id: int,
                              context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if user has Soulink access."""
     if not settings.SOULINK_ENABLED:
         return True
 
@@ -249,7 +167,6 @@ async def has_soulink_access(user_id: int,
 
 
 def create_application():
-    """Create and configure the Telegram bot application."""
     bot_data = {
         "ai_service": ai_service,
         "graph_service": graph_service,
@@ -272,17 +189,8 @@ def create_application():
     return application
 
 
-def start_scheduler():
-    """Start the background task scheduler."""
-    scheduler = BackgroundScheduler()
-    scheduler.start()
-    logger.info("APScheduler started.")
-    return scheduler
-
-
 async def handle_my_chat_member(update: Update,
                                 context: ContextTypes.DEFAULT_TYPE):
-    """Handle bot being added to or removed from chats."""
     result = update.my_chat_member
     chat_id = str(result.chat.id)
     allowed_groups = {settings.GROUP_ID}
@@ -304,7 +212,6 @@ async def handle_my_chat_member(update: Update,
 
 
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /start command."""
     if not await is_user_authorized(update.message.from_user.id, context):
         logger.info("Ignoring /start from unauthorized user "
                     f"{safe_user_log(update.message.from_user.id)}")
@@ -313,7 +220,6 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle incoming text messages."""
     if not is_valid_text_message(update):
         return
 
@@ -347,7 +253,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle bot commands."""
     if not is_valid_text_message(update):
         return
 
@@ -399,13 +304,17 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def initialize_services(app: FastAPI):
-    """Initialize all external services in the background."""
     global pool, store, checkpointer
     logger.info("Background service initialization started...")
     try:
-        llm = AzureChatOpenAI(api_version="2024-12-01-preview",
-                              azure_deployment=settings.MODEL)
+        logger.info("Initializing LLM...")
+        if settings.OPENAI_API_KEY:
+            llm = ChatOpenAI(model=settings.MODEL)
+        else:
+            llm = AzureChatOpenAI(api_version="2024-12-01-preview",
+                                  azure_deployment=settings.MODEL)
 
+        logger.info("Opening Postgres connection pool...")
         pool = AsyncConnectionPool(conninfo=settings.POSTGRES_CONN_STRING,
                                  max_size=20,
                                  open=False,
@@ -413,30 +322,39 @@ async def initialize_services(app: FastAPI):
         await pool.open()
         auth_service.set_database_pool(pool)
 
+        logger.info("Setting up store and checkpointer...")
+        if settings.OPENAI_API_KEY:
+            embed_config = f"openai:{settings.EMBEDDING_MODEL}"
+        else:
+            embed_config = f"azure_openai:{settings.EMBEDDING_MODEL}"
+            
         store = AsyncPostgresStore(
             pool,
             index={
                 "dims": 1536,
-                "embed": f"azure_openai:{settings.EMBEDDING_MODEL}"
+                "embed": embed_config
             },
         )
         checkpointer = AsyncPostgresSaver(pool)
 
+        logger.info("Setting up store...")
         await store.setup()
+        logger.info("Setting up checkpointer...")
         await checkpointer.setup()
+        logger.info("Connecting AI service...")
         ai_service.connect(llm, store, checkpointer)
+        logger.info("Connecting graph service...")
         await graph_service.connect()
 
+        logger.info("Initializing Telegram app...")
         tg_app = create_application()
         await tg_app.initialize()
 
-        scheduler = start_scheduler()
-
+        logger.info("Setting app state...")
         app.state.ai_service = ai_service
         app.state.graph_service = graph_service
         app.state.auth_service = auth_service
         app.state.tg_app = tg_app
-        app.state.scheduler = scheduler
         logger.info("Background service initialization complete.")
     except Exception as e:
         logger.error(f"Background service initialization failed: {e}")
@@ -445,7 +363,6 @@ async def initialize_services(app: FastAPI):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan context manager for TowerBot."""
     logger.info("Application startup sequence initiated...")
     initialization_task = asyncio.create_task(initialize_services(app))
 

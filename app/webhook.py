@@ -1,8 +1,3 @@
-"""Webhook configuration script for TowerBot.
-
-This module provides functionality to set up the Telegram webhook URL
-for receiving updates from the Telegram Bot API.
-"""
 
 import logging
 import asyncio
@@ -15,11 +10,6 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 async def main():
-    """Configure and set the Telegram webhook URL.
-    
-    Creates a Telegram application instance and sets the webhook URL
-    to receive updates from the Telegram Bot API.
-    """
     webhook_url = f"{settings.WEBHOOK_URL}/telegram"
     
     tg_app: Application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
