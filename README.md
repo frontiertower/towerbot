@@ -100,7 +100,7 @@ LANGCHAIN_TRACING_V2=true
 
 ```bash
 # Terminal 1: Start ngrok tunnel
-ngrok http --domain=your-domain.ngrok-free.app 3000
+ngrok http --domain=your-domain.ngrok-free.app 8000
 
 # Terminal 2: Start application
 ./startup.sh
@@ -167,7 +167,7 @@ curl -X POST "https://your-server.com/api/v1/graph/query" \
 uv run pytest
 
 # Run with hot reload
-uv run uvicorn app.main:app --reload --port 3000
+uv run uvicorn app.main:app --reload --port 8000
 
 # Generate ontology enums
 uv run python scripts/generate_enums.py

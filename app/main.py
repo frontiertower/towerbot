@@ -1,10 +1,12 @@
 
 import logging
 
+import sentry_sdk
 from telegram import Update
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks
 
+from app.core.config import settings
 from app.api.graph import graph_router
 from app.core.lifespan import lifespan
 
@@ -22,6 +24,12 @@ logging.getLogger("telegram").setLevel(logging.WARNING)
 logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
+
+if settings.SENTRY_DNS:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DNS,
+        send_default_pii=True,
+    )
 
 app = FastAPI(
     title="TowerBot API",

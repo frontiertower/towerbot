@@ -219,8 +219,7 @@ def get_qa_agent_tools():
         get_calendar_events,
     ]
     
-    # Only include BerlinHouse tools if API credentials are configured
-    if settings.BERLINHOUSE_API_KEY.strip() and settings.BERLINHOUSE_BASE_URL.strip():
+    if settings.BERLINHOUSE_API_KEY and settings.BERLINHOUSE_BASE_URL:
         tools.append(get_tower_communities)
     
     return tools
@@ -233,8 +232,7 @@ def get_connect_agent_tools():
 def get_request_agent_tools():
     tools = []
     
-    # Only include BerlinHouse tools if API credentials are configured
-    if settings.BERLINHOUSE_API_KEY.strip() and settings.BERLINHOUSE_BASE_URL.strip():
+    if settings.BERLINHOUSE_API_KEY and settings.BERLINHOUSE_BASE_URL:
         tools.append(create_supply_request)
     
     return tools

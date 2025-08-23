@@ -15,4 +15,4 @@ RUN /app/.venv/bin/python scripts/generate_enums.py
 
 # Run the webhook setup script first, then start the Uvicorn server.
 CMD /app/.venv/bin/python -m app.webhook \
-    && /app/.venv/bin/uvicorn app.main:app --workers 1 --host 0.0.0.0 --port 3000
+    && /app/.venv/bin/uvicorn app.main:app --workers 1 --host 0.0.0.0 --port 8000

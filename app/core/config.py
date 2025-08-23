@@ -1,4 +1,4 @@
-
+from typing import Optional
 from dotenv import load_dotenv
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -6,12 +6,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 load_dotenv()
 
 class Settings(BaseSettings):
-    ALLOWED_GROUP_IDS: str = ""
+    ALLOWED_GROUP_IDS: Optional[str] = None
     APP_ENV: str = "dev"
-    AZURE_OPENAI_API_KEY: str = ""
-    AZURE_OPENAI_ENDPOINT: str = ""
-    BERLINHOUSE_API_KEY: str = ""
-    BERLINHOUSE_BASE_URL: str = ""
+    AZURE_OPENAI_API_KEY: Optional[str] = None
+    AZURE_OPENAI_ENDPOINT: Optional[str] = None
+    BERLINHOUSE_API_KEY: Optional[str] = None
+    BERLINHOUSE_BASE_URL: Optional[str] = None
     BOT_TOKEN: str
     DEFAULT_DATABASE: str = "neo4j"
     EMBEDDING_MODEL: str
@@ -23,13 +23,14 @@ class Settings(BaseSettings):
     NEO4J_PASSWORD: str
     NEO4J_URI: str
     NEO4J_USER: str
-    NOTION_API_KEY: str = ""
-    OPENAI_API_KEY: str = ""
-    PORT: int = 3000
-    POSTGRES_CONN_STRING: str = ""
+    NOTION_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None
+    PORT: int = 8000
+    POSTGRES_CONN_STRING: Optional[str] = None
     REASONING_MODEL: str
     RERANKER_MODEL: str
-    SOULINK_ADMIN_ID: str = ""
+    SENTRY_DNS: Optional[str] = None
+    SOULINK_ADMIN_ID: Optional[str] = None
     SOULINK_ENABLED: bool = False
     WEBHOOK_URL: str
 
