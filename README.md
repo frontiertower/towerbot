@@ -109,7 +109,7 @@ ngrok http --domain=your-domain.ngrok-free.app 3000
 ### 6. Add Bot to Telegram
 
 1. Add bot to your Telegram group
-2. Promote bot to admin (required for message processing)
+2. **Promote bot to admin** (required for receiving webhooks and processing messages)
 3. Test with `/ask what is this bot?`
 
 ## 🏗️ Architecture
