@@ -25,7 +25,7 @@ logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-if settings.SENTRY_DNS:
+if settings.SENTRY_DNS and settings.APP_ENV == "prod":
     sentry_sdk.init(
         dsn=settings.SENTRY_DNS,
         send_default_pii=True,
