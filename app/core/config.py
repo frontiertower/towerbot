@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALLOWED_GROUP_IDS: Optional[str] = None
     APP_ENV: str = "dev"
     AZURE_OPENAI_API_KEY: Optional[str] = None
+    AZURE_OPENAI_API_VERSION: Optional[str] = None
     AZURE_OPENAI_ENDPOINT: Optional[str] = None
     BERLINHOUSE_API_KEY: Optional[str] = None
     BERLINHOUSE_BASE_URL: Optional[str] = None
