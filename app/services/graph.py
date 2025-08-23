@@ -33,7 +33,7 @@ def get_graphiti_client():
         )
     else:
         api_key = settings.AZURE_OPENAI_API_KEY
-        api_version = "2024-12-01-preview"
+        api_version = settings.AZURE_OPENAI_API_VERSION
         llm_endpoint = settings.AZURE_OPENAI_ENDPOINT
         embedding_endpoint = settings.AZURE_OPENAI_ENDPOINT
 

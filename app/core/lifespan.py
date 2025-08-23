@@ -313,7 +313,7 @@ async def initialize_services(app: FastAPI):
         if settings.OPENAI_API_KEY:
             llm = ChatOpenAI(model=settings.MODEL)
         else:
-            llm = AzureChatOpenAI(api_version="2024-12-01-preview",
+            llm = AzureChatOpenAI(api_version=settings.AZURE_OPENAI_API_VERSION,
                                   azure_deployment=settings.MODEL)
 
         if settings.POSTGRES_CONN_STRING:
