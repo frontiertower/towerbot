@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "apscheduler>=3.11.0",
     "fastapi[standard]>=0.116.0",
-    "graphiti-core>=0.16.0",
+    "graphiti-core==0.18.9",
     "langchain>=0.3.26",
     "langchain-community>=0.3.27",
     "langchain-openai>=0.3.27",
