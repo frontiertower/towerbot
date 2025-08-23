@@ -1,8 +1,3 @@
-"""Response schemas for TowerBot AI agents.
-
-This module defines Pydantic schemas for structuring AI agent responses,
-including question-answering and connection-finding capabilities.
-"""
 
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -11,21 +6,14 @@ from typing import Optional, List, Literal
 from app.schemas.generated_enums import NodeTypeEnum
 
 class SourceType(str, Enum):
-    """Enumeration of data source types for question responses."""
     NOTION_KNOWLEDGE_BASE = "Notion Knowledge Base"
     VECTOR_DATABASE = "Vector Database"
 
 class ToolUsed(str, Enum):
-    """Enumeration of tools used for information retrieval."""
     NOTION_SEARCH = "Notion Search"
     VECTOR_SEARCH = "Vector Search"
 
 class ConnectionCandidate(BaseModel):
-    """Schema representing a potential connection match.
-    
-    Represents a single candidate for user connection based on
-    graph search results, including match confidence and metadata.
-    """
     node_id: str = Field(
         ...,
         description="Unique identifier of the graph node to connect with.",
@@ -46,11 +34,6 @@ class ConnectionCandidate(BaseModel):
     )
 
 class QuestionResponse(BaseModel):
-    """Schema for structured question-answering responses.
-    
-    Provides comprehensive information about how a question was answered,
-    including source attribution, confidence scores, and retrieval metadata.
-    """
     answer: str = Field(
         ...,
         description="The final, synthesized answer to the user's query.",
@@ -92,11 +75,6 @@ class QuestionResponse(BaseModel):
     }
 
 class ConnectionResponse(BaseModel):
-    """Schema for structured connection-finding responses.
-    
-    Provides ranked candidates for user connections along with
-    confidence metrics and search metadata.
-    """
     answer: str = Field(
         ...,
         description="Short, synthesized explanation of who the user should connect with and why.",

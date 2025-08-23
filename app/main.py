@@ -1,8 +1,3 @@
-"""Main FastAPI application module for TowerBot.
-
-This module contains the core FastAPI application setup and request handlers for the TowerBot
-system, which processes Telegram updates and provides health monitoring endpoints.
-"""
 
 import logging
 
@@ -40,12 +35,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(graph_router, include_in_schema=True)
 
 async def process_telegram_update(tg_app, update_data):
-    """Process a Telegram update in the background.
-    
-    Args:
-        tg_app: The Telegram application instance
-        update_data: Raw update data from Telegram webhook
-    """
     try:
         update = Update.de_json(data=update_data, bot=tg_app.bot)
         logger.debug(f"Processing Telegram update {update.update_id}")
@@ -57,28 +46,11 @@ async def process_telegram_update(tg_app, update_data):
 
 @app.get("/health", include_in_schema=False)
 def check_health():
-    """Health check endpoint for monitoring service status.
-    
-    Returns:
-        dict: Status information indicating service health
-    """
     logger.info("Health check requested")
     return {"status": "ok", "message": "TowerBot is running"}
 
 @app.post("/telegram", include_in_schema=False)
 async def handle_telegram_update(request: Request, background_tasks: BackgroundTasks):
-    """Handle incoming Telegram webhook updates.
-    
-    Receives webhook updates from Telegram and queues them for background processing
-    to ensure fast response times and prevent webhook timeouts.
-    
-    Args:
-        request: The incoming HTTP request containing update data
-        background_tasks: FastAPI background tasks manager
-        
-    Returns:
-        dict: Status confirmation message
-    """
     try:
         update_data = await request.json()
         update_id = update_data.get('update_id', 'unknown')

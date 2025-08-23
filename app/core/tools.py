@@ -1,10 +1,3 @@
-"""Core tools and utilities for TowerBot AI agents.
-
-This module provides tools for external API integrations, graph search functionality,
-and agent utilities used by the QA, Connect, and Request agents. Includes BerlinHouse
-API integration for community data and supply request management.
-"""
-
 import json
 import httpx
 import logging
@@ -53,11 +46,6 @@ SEARCH_RECIPE_MAP = {
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_RRF: COMMUNITY_HYBRID_SEARCH_RRF,
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_MMR: COMMUNITY_HYBRID_SEARCH_MMR,
 }
-"""Mapping of search recipe enums to their corresponding configuration objects.
-
-This dictionary maps the SearchRecipeEnum values to their actual Graphiti search
-configuration objects for use in graph search operations.
-"""
 
 @tool("get_calendar_events", parse_docstring=True)
 async def get_calendar_events():
@@ -226,36 +214,27 @@ async def get_connections(
 
 
 def get_qa_agent_tools():
-    """Get the list of tools available to the QA agent.
-    
-    Args:
-        llm: Azure OpenAI language model instance
-        
-    Returns:
-        list: List of tools for the QA agent
-    """
-    return [
+    tools = [
         get_tower_info,
         get_calendar_events,
-        get_tower_communities,
     ]
+    
+    # Only include BerlinHouse tools if API credentials are configured
+    if settings.BERLINHOUSE_API_KEY and settings.BERLINHOUSE_BASE_URL:
+        tools.append(get_tower_communities)
+    
+    return tools
 
 def get_connect_agent_tools():
-    """Get the list of tools available to the Connect agent.
-    
-    Returns:
-        list: List of tools for the Connect agent
-    """
     return [
         get_connections,
     ]
 
 def get_request_agent_tools():
-    """Get the list of tools available to the Request agent.
+    tools = []
     
-    Returns:
-        list: List of tools for the Request agent
-    """
-    return [
-        create_supply_request,
-    ]
+    # Only include BerlinHouse tools if API credentials are configured
+    if settings.BERLINHOUSE_API_KEY and settings.BERLINHOUSE_BASE_URL:
+        tools.append(create_supply_request)
+    
+    return tools

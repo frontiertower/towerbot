@@ -1,8 +1,3 @@
-"""Tool schemas for TowerBot graph search operations.
-
-This module defines enumerations and schemas for graph search functionality,
-including node types, edge types, and search configuration options.
-"""
 
 from enum import Enum
 from typing import List, Optional, Union
@@ -10,11 +5,6 @@ from pydantic import BaseModel, Field
 from app.schemas.generated_enums import NodeTypeEnum, EdgeTypeEnum
 
 class SearchRecipeEnum(str, Enum):
-    """Enumeration of available search recipes for graph queries.
-    
-    Each recipe represents a different search strategy optimized for
-    specific types of queries and result preferences.
-    """
     COMBINED_HYBRID_SEARCH_MMR = "COMBINED_HYBRID_SEARCH_MMR"
     COMBINED_HYBRID_SEARCH_CROSS_ENCODER = "COMBINED_HYBRID_SEARCH_CROSS_ENCODER"
     EDGE_HYBRID_SEARCH_RRF = "EDGE_HYBRID_SEARCH_RRF"
@@ -32,9 +22,6 @@ class SearchRecipeEnum(str, Enum):
     COMMUNITY_HYBRID_SEARCH_CROSS_ENCODER = "COMMUNITY_HYBRID_SEARCH_CROSS_ENCODER"
 
 class SearchInputSchema(BaseModel):
-    """
-    Schema for searching the graph based on a query, filters, and a selected recipe.
-    """
     query: str = Field(..., description="The full message to search the graph")
     recipe: Optional[SearchRecipeEnum] = Field(
         default=None,

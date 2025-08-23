@@ -5,8 +5,8 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from langsmith import Client
-from langchain_openai import AzureChatOpenAI
 from langgraph.prebuilt import create_react_agent
+from langchain_core.language_models import BaseChatModel
 from langgraph.store.postgres.base import BasePostgresStore
 from langgraph.checkpoint.postgres.base import BasePostgresSaver
 from langchain.agents import create_tool_calling_agent, AgentExecutor
@@ -17,30 +17,13 @@ from app.core.tools import get_qa_agent_tools, get_connect_agent_tools, get_requ
 logger = logging.getLogger(__name__)
 
 class AiService:
-    """AI service for managing conversational agents and LLM interactions.
-    
-    This service provides AI-powered capabilities for TowerBot including:
-    - Memory-enabled conversation agents for direct messages
-    - Specialized command handlers for /ask, /connect, and /request commands
-    - Session management for conversation continuity with 24-hour TTL
-    - Integration with LangChain tools and LangMem memory systems
-    - LangSmith observability for LLM tracing and analytics
-    - Dynamic agent creation with tool-specific configurations
-    """
     def __init__(self):
         self.bot = None
         self.client = Client()
-        self.llm: Optional[AzureChatOpenAI] = None
+        self.llm: Optional[BaseChatModel] = None
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
 
-    def connect(self, llm: AzureChatOpenAI, store: BasePostgresStore, checkpointer: BasePostgresSaver):
-        """Initialize the AI service with required components.
-        
-        Args:
-            llm: Azure OpenAI language model instance
-            store: PostgreSQL store for vector embeddings and memory
-            checkpointer: PostgreSQL checkpointer for conversation state
-        """
+    def connect(self, llm: BaseChatModel, store: BasePostgresStore, checkpointer: BasePostgresSaver):
         self.llm = llm
         self.bot = create_react_agent(
             name="General",
@@ -56,18 +39,6 @@ class AiService:
         )
 
     def _get_or_create_session(self, user_id: int, command: str):
-        """Get existing session or create a new one for user conversations.
-        
-        Sessions are maintained for 24 hours to provide conversation continuity.
-        Each session is identified by user_id and command type.
-        
-        Args:
-            user_id: Telegram user ID
-            command: Command type or 'direct' for direct messages
-            
-        Returns:
-            str: Thread ID for the conversation session
-        """
         session_key = f"{user_id}_{command}"
         
         if session_key in self.user_sessions:
@@ -83,14 +54,6 @@ class AiService:
         return thread_id
     
     async def handle_ask(self, message: str):
-        """Handle /ask command using QA agent with specialized tools.
-        
-        Args:
-            message: User's question or query
-            
-        Returns:
-            str: AI-generated response to the user's question
-        """
         tools = get_qa_agent_tools()
         prompt = self.client.pull_prompt("totaylor/towerbot-ask")
 
@@ -106,14 +69,6 @@ class AiService:
         return response.get("output")
     
     async def handle_connect(self, message: str):
-        """Handle /connect command using connection agent with graph search tools.
-        
-        Args:
-            message: User's connection request or interest
-            
-        Returns:
-            str: AI-generated response with connection suggestions
-        """
         tools = get_connect_agent_tools()
         prompt = self.client.pull_prompt("totaylor/towerbot-connect")
 
@@ -129,19 +84,6 @@ class AiService:
         return response.get("output")
     
     async def handle_request(self, message: str):
-        """
-        Handle /request command using the request agent with supply request tools.
-
-        This method processes user requests for supplies or resources by leveraging
-        specialized tools and prompts. It creates an agent executor configured for
-        handling supply requests and invokes it with the user's message.
-
-        Args:
-            message (str): The user's supply request or inquiry.
-
-        Returns:
-            str: AI-generated response regarding the supply request.
-        """
         tools = get_request_agent_tools()
         prompt = self.client.pull_prompt("totaylor/towerbot-request")
 
@@ -157,18 +99,6 @@ class AiService:
         return response.get("output")
 
     async def agent(self, message: str, user_id: int):
-        """Process direct messages using memory-enabled conversational agent.
-        
-        This method handles private chat interactions with full memory capabilities,
-        allowing for context-aware conversations that remember previous interactions.
-        
-        Args:
-            message: User's message content
-            user_id: Telegram user ID for session management
-            
-        Returns:
-            str: AI-generated conversational response
-        """
         prompt = self.client.pull_prompt("totaylor/towerbot-general")
 
         messages = [
