@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     NOTION_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     PORT: int = 3000
-    POSTGRES_CONN_STRING: str
+    POSTGRES_CONN_STRING: str = ""
     REASONING_MODEL: str
     RERANKER_MODEL: str
     SOULINK_ADMIN_ID: str = ""
