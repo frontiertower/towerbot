@@ -1827,6 +1827,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/36/3d/742617a7c644deb0c1628dcf6bb2d2165ab7c6aab56fe5222758994007f8/sentry_sdk-2.35.0-py2.py3-none-any.whl", hash = "sha256:6e0c29b9a5d34de8575ffb04d289a987ff3053cf2c98ede445bea995e3830263", size = 363806, upload-time = "2025-08-14T17:11:18.29Z" },
 ]
 
+[package.optional-dependencies]
+fastapi = [
+    { name = "fastapi" },
+]
+
 [[package]]
 name = "shellingham"
 version = "1.5.4"
@@ -1961,6 +1966,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-telegram-bot" },
+    { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "uvicorn" },
 ]
 
@@ -1987,6 +1993,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "python-telegram-bot", specifier = ">=22.2" },
+    { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.35.0" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 

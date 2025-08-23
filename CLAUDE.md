@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This project uses `uv` for Python dependency management and task execution:
 
 - **Install dependencies**: `uv sync`
-- **Run development server**: `uv run uvicorn app.main:app --reload --port 3000 --host 0.0.0.0`
+- **Run development server**: `uv run uvicorn app.main:app --reload --port 8000 --host 0.0.0.0`
 - **Run tests**: `uv run pytest` (tests configured in pytest.ini)
 - **Generate enums**: `uv run python scripts/generate_enums.py`
 - **Start full application**: `./startup.sh` (generates enums, starts webhook, then API server)
@@ -44,6 +44,7 @@ The startup.sh script runs the enum generation, webhook service, and FastAPI ser
 ### Configuration
 
 The app uses pydantic-settings for environment-based configuration. Key settings include:
+
 - Telegram bot token and group IDs for authorization
 - OpenAI/Azure OpenAI credentials and model settings
 - PostgreSQL connection string (optional - uses in-memory fallback if not provided)

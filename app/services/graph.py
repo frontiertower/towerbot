@@ -121,13 +121,6 @@ class GraphService:
             except Exception as e:
                 logger.error(f"Error closing graph service connection: {e}")
 
-    async def build_communities(self):
-            try:
-                await self.graphiti.build_communities()
-                logger.info("Graph communities built successfully")
-            except Exception as e:
-                logger.error(f"Failed to build graph communities: {e}")
-
     async def check_user_exists(self, message: TelegramMessage):
         user_id = message.from_user.id
         cypher = """
