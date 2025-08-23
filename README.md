@@ -28,7 +28,7 @@ TowerBot is an open source, AI-powered Telegram bot for Frontier Tower citizens.
 - **python-telegram-bot** (Telegram integration)
 - **LangChain/LangGraph/LangMem** (AI agents and memory)
 - **Graphiti** (temporal knowledge graph)
-- **PostgreSQL** with **pgvector** (vector storage)
+- **PostgreSQL** with **pgvector** (optional vector storage, falls back to in-memory)
 - **OpenAI/Azure OpenAI** (LLM services)
 - **pytest** (testing with 91 test cases)
 
@@ -37,7 +37,7 @@ TowerBot is an open source, AI-powered Telegram bot for Frontier Tower citizens.
 ### 1. Prerequisites
 
 - **Python 3.12+**
-- **Docker** (for PostgreSQL)
+- **Docker** (optional, for PostgreSQL)
 - **ngrok** (for webhook tunneling)
 
 Install uv package manager:
@@ -85,7 +85,7 @@ OPENAI_API_KEY=your-openai-key
 MODEL=gpt-4
 EMBEDDING_MODEL=text-embedding-3-small
 
-# Database
+# Database (optional - uses in-memory fallback if not provided)
 POSTGRES_CONN_STRING=postgresql://postgres:postgres@localhost:5436/towerbot
 
 # Webhook (get free domain from ngrok.com)

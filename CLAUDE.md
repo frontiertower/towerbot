@@ -36,7 +36,7 @@ The startup.sh script runs the enum generation, webhook service, and FastAPI ser
 
 ### Database & Infrastructure
 
-- **PostgreSQL**: Used for LangGraph checkpoints, memory store, and Graphiti graph storage
+- **PostgreSQL**: Optional persistent storage for LangGraph checkpoints, memory store, and Graphiti graph storage (falls back to in-memory)
 - **Connection Pooling**: AsyncConnectionPool with 20 max connections
 - **Background Processing**: Telegram updates processed via FastAPI BackgroundTasks
 - **Lifespan Management**: Proper startup/shutdown of services, pools, and connections
@@ -46,7 +46,7 @@ The startup.sh script runs the enum generation, webhook service, and FastAPI ser
 The app uses pydantic-settings for environment-based configuration. Key settings include:
 - Telegram bot token and group IDs for authorization
 - OpenAI/Azure OpenAI credentials and model settings
-- PostgreSQL connection string
+- PostgreSQL connection string (optional - uses in-memory fallback if not provided)
 - Soulink integration settings
 
 ### Testing

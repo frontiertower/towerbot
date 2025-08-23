@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.store.memory import InMemoryStore
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -47,8 +49,8 @@ def safe_update_log(update: Update) -> str:
 
 
 pool: AsyncConnectionPool | None = None
-store: AsyncPostgresStore | None = None
-checkpointer: AsyncPostgresSaver | None = None
+store: AsyncPostgresStore | InMemoryStore | None = None
+checkpointer: AsyncPostgresSaver | MemorySaver | None = None
 
 connection_kwargs = {
     "autocommit": True,
@@ -314,33 +316,38 @@ async def initialize_services(app: FastAPI):
             llm = AzureChatOpenAI(api_version="2024-12-01-preview",
                                   azure_deployment=settings.MODEL)
 
-        logger.info("Opening Postgres connection pool...")
-        pool = AsyncConnectionPool(conninfo=settings.POSTGRES_CONN_STRING,
-                                 max_size=20,
-                                 open=False,
-                                 kwargs=connection_kwargs)
-        await pool.open()
-        auth_service.set_database_pool(pool)
+        if settings.POSTGRES_CONN_STRING:
+            logger.info("Opening Postgres connection pool...")
+            pool = AsyncConnectionPool(conninfo=settings.POSTGRES_CONN_STRING,
+                                     max_size=20,
+                                     open=False,
+                                     kwargs=connection_kwargs)
+            await pool.open()
+            auth_service.set_database_pool(pool)
 
-        logger.info("Setting up store and checkpointer...")
-        if settings.OPENAI_API_KEY:
-            embed_config = f"openai:{settings.EMBEDDING_MODEL}"
+            logger.info("Setting up store and checkpointer...")
+            if settings.OPENAI_API_KEY:
+                embed_config = f"openai:{settings.EMBEDDING_MODEL}"
+            else:
+                embed_config = f"azure_openai:{settings.EMBEDDING_MODEL}"
+                
+            store = AsyncPostgresStore(
+                pool,
+                index={
+                    "dims": 1536,
+                    "embed": embed_config
+                },
+            )
+            checkpointer = AsyncPostgresSaver(pool)
+
+            logger.info("Setting up store...")
+            await store.setup()
+            logger.info("Setting up checkpointer...")
+            await checkpointer.setup()
         else:
-            embed_config = f"azure_openai:{settings.EMBEDDING_MODEL}"
-            
-        store = AsyncPostgresStore(
-            pool,
-            index={
-                "dims": 1536,
-                "embed": embed_config
-            },
-        )
-        checkpointer = AsyncPostgresSaver(pool)
-
-        logger.info("Setting up store...")
-        await store.setup()
-        logger.info("Setting up checkpointer...")
-        await checkpointer.setup()
+            logger.info("Using in-memory stores (no POSTGRES_CONN_STRING provided)...")
+            store = InMemoryStore()
+            checkpointer = MemorySaver()
         logger.info("Connecting AI service...")
         ai_service.connect(llm, store, checkpointer)
         logger.info("Connecting graph service...")
