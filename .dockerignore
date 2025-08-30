@@ -2,4 +2,3 @@
 .git*
 **/*.pyc
 .venv/
-app/schemas/generated_enums.py

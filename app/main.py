@@ -7,7 +7,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks
 
 from app.core.config import settings
-from app.api.graph import graph_router
 from app.core.lifespan import lifespan
 
 logging.basicConfig(
@@ -31,16 +30,9 @@ if settings.SENTRY_DNS and settings.APP_ENV == "prod":
         send_default_pii=True,
     )
 
-app = FastAPI(
-    title="TowerBot API",
-    description="API for querying TowerBot's temporal knowledge graph",
-    version="1.0.0",
-    lifespan=lifespan
-)
+app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-app.include_router(graph_router, include_in_schema=True)
 
 async def process_telegram_update(tg_app, update_data):
     try:
@@ -52,12 +44,12 @@ async def process_telegram_update(tg_app, update_data):
         logger.error(f"Failed to process Telegram update: {e}")
         raise
 
-@app.get("/health", include_in_schema=False)
+@app.get("/health")
 def check_health():
     logger.info("Health check requested")
     return {"status": "ok", "message": "TowerBot is running"}
 
-@app.post("/telegram", include_in_schema=False)
+@app.post("/telegram")
 async def handle_telegram_update(request: Request, background_tasks: BackgroundTasks):
     try:
         update_data = await request.json()
