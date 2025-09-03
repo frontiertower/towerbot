@@ -1,8 +1,8 @@
+import httpx
 import logging
 import sentry_sdk
 
 from telegram import Update
-from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks, Query
 
@@ -70,94 +70,81 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
         raise
 
 
-@app.get("/oauth/callback", response_class=HTMLResponse)
-async def oauth_callback(
-    request: Request,
+@app.get("/callback")
+async def oauth_callback_debug(
     code: str = Query(..., description="OAuth authorization code"),
-    state: str = Query(..., description="OAuth state parameter (our token)"),
-    error: str = Query(None, description="OAuth error parameter"),
+    state: str = Query(..., description="OAuth state parameter"),
+    error: str = Query(None, description="OAuth error parameter")
 ):
-    """Handle OAuth callback from provider"""
+    print(f"code: {code}")
+    print(f"state: {state}")
+    if error:
+        print(f"error: {error}")
+        return {"status": "error", "error": error}
+    
+    token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
+    
+    token_data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": f"{settings.WEBHOOK_URL}/callback",
+        "client_id": settings.OAUTH_CLIENT_ID,
+        "client_secret": settings.OAUTH_CLIENT_SECRET,
+    }
+    
     try:
-        if error:
-            logger.error(f"OAuth error: {error}")
-            return HTMLResponse(
-                content="""
-                <html>
-                    <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-                        <h2>❌ Authorization Failed</h2>
-                        <p>There was an error during authorization: {}</p>
-                        <p>You can close this window and try again.</p>
-                    </body>
-                </html>
-                """.format(error),
-                status_code=400,
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                token_url,
+                data=token_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
             )
-
-        token_data = auth_service.get_oauth_token_data(state)
-        if not token_data:
-            logger.warning(f"Invalid or expired OAuth token: {state[:8]}...")
-            return HTMLResponse(
-                content="""
-                <html>
-                    <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-                        <h2>❌ Invalid or Expired Link</h2>
-                        <p>The authorization link has expired or is invalid.</p>
-                        <p>Please request a new authorization link from the bot.</p>
-                    </body>
-                </html>
-                """,
-                status_code=400,
-            )
-
-        auth_service.mark_oauth_token_used(state)
-
-        user_id = token_data["user_id"]
-        logger.info(f"OAuth callback successful for user {user_id}")
-
-
-        tg_app = request.app.state.tg_app
-        try:
-            await tg_app.bot.send_message(
-                chat_id=user_id,
-                text="✅ <b>Authorization Successful!</b>\n\n"
-                "Your account has been successfully linked via OAuth.\n"
-                "You can now close this browser window.",
-                parse_mode="HTML",
-            )
-        except Exception as e:
-            logger.warning(
-                f"Could not send confirmation message to user {user_id}: {e}"
-            )
-
-        return HTMLResponse(
-            content="""
-            <html>
-                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-                    <h2>✅ Authorization Successful!</h2>
-                    <p>Your account has been successfully linked.</p>
-                    <p>You can now close this window and return to Telegram.</p>
-                    <script>
-                        setTimeout(function() {
-                            window.close();
-                        }, 3000);
-                    </script>
-                </body>
-            </html>
-            """
-        )
-
+            
+            print(f"Token exchange response status: {response.status_code}")
+            print(f"Token exchange response: {response.text}")
+            
+            if response.status_code == 200:
+                token_response = response.json()
+                print(f"Access token received: {token_response}")
+                
+                access_token = token_response.get("accessToken")
+                if access_token:
+                    print(f"Fetching user info with access token...")
+                    
+                    user_info = await auth_service.get_user_info(access_token)
+                    
+                    if user_info:
+                        print(f"User info received: {user_info}")
+                        
+                        user_id = user_info.get("id")
+                        
+                        if user_id:
+                            session_saved = await auth_service.save_user_session(
+                                user_id=user_id,
+                                access_token=access_token,
+                            )
+                            print(f"Session saved: {session_saved}")
+                        else:
+                            print("No user ID found in user info")
+                        
+                        return {
+                            "status": "success", 
+                            "token_response": token_response,
+                            "user_info": user_info
+                        }
+                    else:
+                        print("Failed to get user info")
+                        return {
+                            "status": "user_info_failed",
+                            "token_response": token_response
+                        }
+                else:
+                    print("No access token found in response")
+                    return {"status": "no_access_token", "token_response": token_response}
+            else:
+                print(f"Token exchange failed: {response.status_code} - {response.text}")
+                return {"status": "token_exchange_failed", "status_code": response.status_code, "response": response.text}
+                
     except Exception as e:
-        logger.error(f"OAuth callback error: {e}")
-        return HTMLResponse(
-            content="""
-            <html>
-                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-                    <h2>❌ Server Error</h2>
-                    <p>An unexpected error occurred during authorization.</p>
-                    <p>Please try again later.</p>
-                </body>
-            </html>
-            """,
-            status_code=500,
-        )
+        print(f"Error during token exchange: {e}")
+        return {"status": "error", "message": str(e)}

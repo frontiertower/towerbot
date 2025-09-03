@@ -108,7 +108,7 @@ async def handle_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    
+
     if context.args:
         param = context.args[0]
         if param == "auth_success":
@@ -116,14 +116,14 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "🎉 <b>Welcome back!</b>\n\n"
                 "Your OAuth authorization was completed successfully. "
                 "You can now use all bot features that require authentication.",
-                parse_mode="HTML"
+                parse_mode="HTML",
             )
             return
-    
+
     if not await auth_service.check_user_has_session(user_id):
         await handle_login(update, context)
         return
-    
+
     await update.message.reply_text(INTRODUCTION)
 
 
@@ -131,7 +131,7 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /login command to initiate OAuth flow"""
     user_id = update.message.from_user.id
 
-    if not settings.OAUTH_BASE_URL or not settings.OAUTH_CLIENT_ID:
+    if not settings.BERLINHOUSE_BASE_URL or not settings.OAUTH_CLIENT_ID:
         await update.message.reply_text(
             "OAuth is not configured on this bot. Please contact the administrator."
         )
@@ -139,14 +139,16 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         oauth_url = (
-            f"{settings.OAUTH_BASE_URL}/o/authorize/?response_type=code&"
+            f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
-            f"redirect_uri={settings.WEBHOOK_URL}/oauth/callback&"
+            f"redirect_uri={settings.WEBHOOK_URL}/callback&"
             f"state={user_id}&"
             f"scope=read"
         )
 
-        keyboard = [[InlineKeyboardButton("🏢 Sign in with Frontier Tower", url=oauth_url)]]
+        keyboard = [
+            [InlineKeyboardButton("🏢 Sign in with Frontier Tower", url=oauth_url)]
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(

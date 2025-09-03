@@ -1,6 +1,7 @@
 from enum import Enum
-from typing import List, Optional, Union
+
 from pydantic import BaseModel, Field
+from typing import List, Optional, Union
 from app.schemas.generated_enums import NodeTypeEnum, EdgeTypeEnum
 
 
