@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     NEO4J_URI: str
     NEO4J_USER: str
     NOTION_API_KEY: Optional[str] = None
+    OAUTH_BASE_URL: Optional[str] = None
+    OAUTH_CLIENT_ID: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     PORT: int = 8000
     POSTGRES_CONN_STRING: Optional[str] = None

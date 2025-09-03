@@ -1,9 +1,9 @@
 
 import asyncio
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -17,6 +17,7 @@ from telegram.error import (BadRequest, Forbidden, NetworkError, RetryAfter,
 from telegram.ext import (ApplicationBuilder, ChatMemberHandler,
                           CommandHandler, ContextTypes, MessageHandler,
                           filters)
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.core.config import settings
 from app.core.constants import COMMAND_EXAMPLES, INTRODUCTION
@@ -177,6 +178,7 @@ def create_application():
     application.bot_data.update(bot_data)
 
     application.add_handler(CommandHandler("start", handle_start))
+    application.add_handler(CommandHandler("login", handle_login))
     application.add_handler(
         CommandHandler(["ask", "connect", "request"], handle_command))
     application.add_handler(
@@ -219,6 +221,57 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"{safe_user_log(update.message.from_user.id)}")
         return
     await update.message.reply_text(INTRODUCTION)
+
+
+async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /login command to initiate OAuth flow"""
+    user_id = update.message.from_user.id
+    
+    # Check if OAuth is configured
+    if not settings.OAUTH_BASE_URL or not settings.OAUTH_CLIENT_ID:
+        await update.message.reply_text(
+            "OAuth is not configured on this bot. Please contact the administrator."
+        )
+        return
+    
+    # Check if user is authorized to use the bot
+    if not await is_user_authorized(user_id, context):
+        logger.info(f"Ignoring /login from unauthorized user {safe_user_log(user_id)}")
+        return
+    
+    try:
+        # Generate OAuth token
+        oauth_token = auth_service.generate_oauth_token(user_id, expires_minutes=30)
+        
+        # Build OAuth URL
+        oauth_url = (
+            f"{settings.OAUTH_BASE_URL}/o/authorize/?response_type=code&"
+            f"client_id={settings.OAUTH_CLIENT_ID}&"
+            f"redirect_uri={settings.WEBHOOK_URL}&"
+            f"scope=read"
+        )
+        
+        # Create inline keyboard
+        keyboard = [[InlineKeyboardButton("🔗 Authorize with OAuth", url=oauth_url)]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "🔐 <b>OAuth Authorization</b>\n\n"
+            "Click the button below to authorize your account with OAuth.\n"
+            "This will allow you to access additional features.\n\n"
+            "<i>⏰ This link will expire in 30 minutes.</i>",
+            reply_markup=reply_markup,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"OAuth flow initiated for user {safe_user_log(user_id)}")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate OAuth flow for user {safe_user_log(user_id)}: {e}")
+        await update.message.reply_text(
+            "❌ Sorry, there was an error generating the authorization link. "
+            "Please try again later."
+        )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
