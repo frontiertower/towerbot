@@ -30,19 +30,19 @@ from app.services.graph import graph_service
 logger = logging.getLogger(__name__)
 
 
-def safe_user_log(user_id: int) -> str:
+def safe_user_log(user_id: int):
     if settings.APP_ENV == "dev":
         return str(user_id)
     return f"user_{str(user_id)[:4]}***"
 
 
-def safe_message_log(message_text: str) -> str:
+def safe_message_log(message_text: str):
     if settings.APP_ENV == "dev":
         return message_text
     return f"[{len(message_text)} chars]"
 
 
-def safe_update_log(update: Update) -> str:
+def safe_update_log(update: Update):
     if settings.APP_ENV == "dev":
         return str(update)
     return (
@@ -120,9 +120,10 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    if not await auth_service.check_user_has_session(user_id):
-        await handle_login(update, context)
-        return
+    if settings.OAUTH_CLIENT_ID and settings.OAUTH_CLIENT_SECRET:
+        if not await auth_service.check_user_has_session(user_id):
+            await handle_login(update, context)
+            return
 
     await update.message.reply_text(INTRODUCTION)
 
@@ -179,9 +180,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.type == "private":
         user_id = update.message.from_user.id
 
-        if not await auth_service.check_user_has_session(user_id):
-            await handle_login(update, context)
-            return
+        if settings.OAUTH_CLIENT_ID and settings.OAUTH_CLIENT_SECRET:
+            if not await auth_service.check_user_has_session(user_id):
+                await handle_login(update, context)
+                return
 
         if not await graph_service.check_user_exists(update.message):
             await update.message.reply_text(
@@ -216,9 +218,10 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.message.from_user.id
 
-    if not await auth_service.check_user_has_session(user_id):
-        await handle_login(update, context)
-        return
+    if settings.OAUTH_CLIENT_ID and settings.OAUTH_CLIENT_SECRET:
+        if not await auth_service.check_user_has_session(user_id):
+            await handle_login(update, context)
+            return
 
     full_command = update.message.text.split()[0][1:]
     command = full_command.split("@")[0]

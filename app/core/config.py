@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     BERLINHOUSE_API_KEY: Optional[str] = None
     BERLINHOUSE_BASE_URL: Optional[str] = None
     BOT_TOKEN: str
-    DEFAULT_DATABASE: str = "neo4j"
+    DEFAULT_DATABASE: str
     EMBEDDING_MODEL: str
     GROUP_ID: str
     LANGSMITH_API_KEY: str

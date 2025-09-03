@@ -6,9 +6,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 
 
-def extract_ontology_types() -> Tuple[
-    List[str], List[str], Dict[Tuple[str, str], List[str]]
-]:
+def extract_ontology_types():
     script_dir = Path(__file__).parent
     ontology_path = script_dir.parent / "app" / "schemas" / "ontology.py"
 
@@ -109,7 +107,7 @@ def generate_enum_code(
     node_types: List[str],
     edge_types: List[str],
     edge_type_map: Dict[Tuple[str, str], List[str]],
-) -> str:
+):
     code = """from enum import Enum
 
 class NodeTypeEnum(str, Enum):

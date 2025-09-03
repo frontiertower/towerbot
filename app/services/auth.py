@@ -18,11 +18,11 @@ class AuthService:
     def __init__(self):
         self._pool: Optional[AsyncConnectionPool] = None
 
-    def set_database_pool(self, pool: AsyncConnectionPool) -> None:
+    def set_database_pool(self, pool: AsyncConnectionPool):
         self._pool = pool
         logger.info("Database pool set for AuthService")
 
-    async def check_user_has_session(self, user_id: int) -> bool:
+    async def check_user_has_session(self, user_id: int):
         """Check if user has a valid session (returns True/False without raising exceptions)"""
         if self._pool is None:
             logger.error("Database pool not available")
@@ -48,7 +48,9 @@ class AuthService:
             logger.error(f"Database error checking user session: {e}")
             return False
 
-    async def save_user_session(self, user_id: int, access_token: str) -> bool:
+    async def save_user_session(
+        self, user_id: int, telegram_id: int, access_token: str
+    ):
         """Save user session to the sessions table"""
         if self._pool is None:
             logger.error("Database pool not available")
@@ -57,18 +59,19 @@ class AuthService:
         try:
             async with self._pool.connection() as conn:
                 conn.row_factory = dict_row
-                async with conn.cursor() as cursor:     
+                async with conn.cursor() as cursor:
                     await cursor.execute(
                         """
-                        INSERT INTO sessions (user_id, access_token)
-                        VALUES (%s, %s)
+                        INSERT INTO sessions (user_id, telegram_id, access_token)
+                        VALUES (%s, %s, %s)
                         ON CONFLICT (user_id) 
                         DO UPDATE SET 
-                            access_token = EXCLUDED.access_token
+                            access_token = EXCLUDED.access_token,
+                            telegram_id = EXCLUDED.telegram_id,
                         """,
-                        (user_id, access_token)
+                        (user_id, telegram_id, access_token),
                     )
-                    
+
             logger.info(f"Session saved for user {user_id}")
             return True
 
@@ -76,13 +79,15 @@ class AuthService:
             logger.error(f"Database error saving user session: {e}")
             return False
 
-    async def get_user_info(self, access_token: str) -> dict:
+    async def get_user_info(self, access_token: str):
         """Get user info from BerlinHouse API using access token"""
-        headers = {'Authorization': f'Bearer {access_token}'}
-        
+        headers = {"Authorization": f"Bearer {access_token}"}
+
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f'{settings.BERLINHOUSE_BASE_URL}/auth/users/me/', headers=headers)
+                response = await client.get(
+                    f"{settings.BERLINHOUSE_BASE_URL}/auth/users/me/", headers=headers
+                )
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching user info: {e}")

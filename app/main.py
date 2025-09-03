@@ -71,19 +71,15 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
 
 
 @app.get("/callback")
-async def oauth_callback_debug(
-    code: str = Query(..., description="OAuth authorization code"),
-    state: str = Query(..., description="OAuth state parameter"),
-    error: str = Query(None, description="OAuth error parameter")
-):
+async def oauth_callback_debug(code: str, state: str, error: str):
     print(f"code: {code}")
     print(f"state: {state}")
     if error:
         print(f"error: {error}")
         return {"status": "error", "error": error}
-    
+
     token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
-    
+
     token_data = {
         "grant_type": "authorization_code",
         "code": code,
@@ -91,60 +87,79 @@ async def oauth_callback_debug(
         "client_id": settings.OAUTH_CLIENT_ID,
         "client_secret": settings.OAUTH_CLIENT_SECRET,
     }
-    
+
+    # token_data = {
+    #     "grant_type": "refresh_token",
+    #     "code": code,
+    #     "refresh_token": YOUR_REFRESH_TOKEN,
+    #     "redirect_uri": f"{settings.WEBHOOK_URL}/callback",
+    #     "client_id": settings.OAUTH_CLIENT_ID,
+    #     "client_secret": settings.OAUTH_CLIENT_SECRET,
+    # }
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 token_url,
                 data=token_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
-            
+
             print(f"Token exchange response status: {response.status_code}")
             print(f"Token exchange response: {response.text}")
-            
+
             if response.status_code == 200:
                 token_response = response.json()
                 print(f"Access token received: {token_response}")
-                
+
                 access_token = token_response.get("accessToken")
                 if access_token:
                     print(f"Fetching user info with access token...")
-                    
+
                     user_info = await auth_service.get_user_info(access_token)
-                    
+
                     if user_info:
                         print(f"User info received: {user_info}")
-                        
+
                         user_id = user_info.get("id")
-                        
+
                         if user_id:
                             session_saved = await auth_service.save_user_session(
                                 user_id=user_id,
+                                telegram_id=state,
                                 access_token=access_token,
                             )
                             print(f"Session saved: {session_saved}")
                         else:
                             print("No user ID found in user info")
-                        
+
                         return {
-                            "status": "success", 
+                            "status": "success",
                             "token_response": token_response,
-                            "user_info": user_info
+                            "user_info": user_info,
                         }
                     else:
                         print("Failed to get user info")
                         return {
                             "status": "user_info_failed",
-                            "token_response": token_response
+                            "token_response": token_response,
                         }
                 else:
                     print("No access token found in response")
-                    return {"status": "no_access_token", "token_response": token_response}
+                    return {
+                        "status": "no_access_token",
+                        "token_response": token_response,
+                    }
             else:
-                print(f"Token exchange failed: {response.status_code} - {response.text}")
-                return {"status": "token_exchange_failed", "status_code": response.status_code, "response": response.text}
-                
+                print(
+                    f"Token exchange failed: {response.status_code} - {response.text}"
+                )
+                return {
+                    "status": "token_exchange_failed",
+                    "status_code": response.status_code,
+                    "response": response.text,
+                }
+
     except Exception as e:
         print(f"Error during token exchange: {e}")
         return {"status": "error", "message": str(e)}
