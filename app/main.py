@@ -1,4 +1,3 @@
-
 import logging
 import sentry_sdk
 
@@ -17,7 +16,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.StreamHandler(),
-    ]
+    ],
 )
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -36,6 +35,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
 async def process_telegram_update(tg_app, update_data):
     try:
         update = Update.de_json(data=update_data, bot=tg_app.bot)
@@ -46,18 +46,22 @@ async def process_telegram_update(tg_app, update_data):
         logger.error(f"Failed to process Telegram update: {e}")
         raise
 
+
 @app.get("/health")
 def check_health():
     logger.info("Health check requested")
     return {"status": "ok", "message": "TowerBot is running"}
 
+
 @app.post("/telegram")
 async def handle_telegram_update(request: Request, background_tasks: BackgroundTasks):
     try:
         update_data = await request.json()
-        update_id = update_data.get('update_id', 'unknown')
-        logger.info(f"Telegram update {update_id} received, queueing for background processing")
-        
+        update_id = update_data.get("update_id", "unknown")
+        logger.info(
+            f"Telegram update {update_id} received, queueing for background processing"
+        )
+
         tg_app = request.app.state.tg_app
         background_tasks.add_task(process_telegram_update, tg_app, update_data)
         return {"status": "ok"}
@@ -71,11 +75,10 @@ async def oauth_callback(
     request: Request,
     code: str = Query(..., description="OAuth authorization code"),
     state: str = Query(..., description="OAuth state parameter (our token)"),
-    error: str = Query(None, description="OAuth error parameter")
+    error: str = Query(None, description="OAuth error parameter"),
 ):
     """Handle OAuth callback from provider"""
     try:
-        # Check for OAuth error
         if error:
             logger.error(f"OAuth error: {error}")
             return HTMLResponse(
@@ -88,10 +91,9 @@ async def oauth_callback(
                     </body>
                 </html>
                 """.format(error),
-                status_code=400
+                status_code=400,
             )
-        
-        # Validate the state (our OAuth token)
+
         token_data = auth_service.get_oauth_token_data(state)
         if not token_data:
             logger.warning(f"Invalid or expired OAuth token: {state[:8]}...")
@@ -105,33 +107,29 @@ async def oauth_callback(
                     </body>
                 </html>
                 """,
-                status_code=400
+                status_code=400,
             )
-        
-        # Mark token as used
+
         auth_service.mark_oauth_token_used(state)
-        
-        user_id = token_data['user_id']
+
+        user_id = token_data["user_id"]
         logger.info(f"OAuth callback successful for user {user_id}")
-        
-        # Here you would normally:
-        # 1. Exchange the 'code' for an access token from the OAuth provider
-        # 2. Store the access token linked to the Telegram user_id
-        # 3. Optionally send a confirmation message via the bot
-        
-        # For now, we'll just show success
+
+
         tg_app = request.app.state.tg_app
         try:
             await tg_app.bot.send_message(
                 chat_id=user_id,
                 text="✅ <b>Authorization Successful!</b>\n\n"
-                     "Your account has been successfully linked via OAuth.\n"
-                     "You can now close this browser window.",
-                parse_mode="HTML"
+                "Your account has been successfully linked via OAuth.\n"
+                "You can now close this browser window.",
+                parse_mode="HTML",
             )
         except Exception as e:
-            logger.warning(f"Could not send confirmation message to user {user_id}: {e}")
-        
+            logger.warning(
+                f"Could not send confirmation message to user {user_id}: {e}"
+            )
+
         return HTMLResponse(
             content="""
             <html>
@@ -148,7 +146,7 @@ async def oauth_callback(
             </html>
             """
         )
-        
+
     except Exception as e:
         logger.error(f"OAuth callback error: {e}")
         return HTMLResponse(
@@ -161,5 +159,5 @@ async def oauth_callback(
                 </body>
             </html>
             """,
-            status_code=500
+            status_code=500,
         )

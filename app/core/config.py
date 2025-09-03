@@ -5,8 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
+
 class Settings(BaseSettings):
-    ALLOWED_GROUP_IDS: Optional[str] = None
     APP_ENV: str = "dev"
     AZURE_OPENAI_API_KEY: Optional[str] = None
     AZURE_OPENAI_API_VERSION: Optional[str] = None
@@ -33,10 +33,9 @@ class Settings(BaseSettings):
     REASONING_MODEL: str
     RERANKER_MODEL: str
     SENTRY_DNS: Optional[str] = None
-    SOULINK_ADMIN_ID: Optional[str] = None
-    SOULINK_ENABLED: bool = False
     WEBHOOK_URL: str
 
-    model_config = SettingsConfigDict(env_file=".env", extra='ignore')
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
 
 settings = Settings()
