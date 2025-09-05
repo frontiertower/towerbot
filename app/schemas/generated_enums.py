@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class NodeTypeEnum(str, Enum):
     Event = "Event"
     Floor = "Floor"
@@ -8,6 +9,7 @@ class NodeTypeEnum(str, Enum):
     Project = "Project"
     Topic = "Topic"
     User = "User"
+
 
 class EdgeTypeEnum(str, Enum):
     Attends = "ATTENDS"
@@ -18,6 +20,7 @@ class EdgeTypeEnum(str, Enum):
     Sent = "SENT"
     SentIn = "SENT_IN"
     WorksOn = "WORKS_ON"
+
 
 EDGE_TYPE_MAP = {
     ("Event", "Floor"): ["LOCATED_ON"],

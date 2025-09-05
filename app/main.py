@@ -6,6 +6,7 @@ from typing import Optional
 
 from telegram import Update
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, Request, BackgroundTasks, Query
 
 from app.core.config import settings
@@ -84,20 +85,15 @@ async def handle_oauth_callback(
         return {"status": "error", "error": error}
 
     telegram_id = int(state)
+    access_token = None
 
-    # code_verifier = await auth_service.get_pkce_verifier(telegram_id)
     code_verifier = await auth_service.get_pkce_verifier_for_debug(telegram_id)
     if not code_verifier:
-        logger.error(
-            f"Could not find PKCE code_verifier for user {telegram_id}. Session may have expired."
-        )
+        logger.error(f"Could not find PKCE code_verifier for user {telegram_id}.")
         return {
             "status": "error",
             "message": "Authentication session expired. Please try logging in again.",
         }
-    
-    if access_token:
-        await auth_service.clear_pkce_verifier(telegram_id)
 
     data = {
         "grant_type": "authorization_code",
@@ -107,72 +103,55 @@ async def handle_oauth_callback(
         "client_secret": settings.OAUTH_CLIENT_SECRET,
         "code_verifier": code_verifier,
     }
-
     token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(
+            token_response = await client.post(
                 token_url,
                 data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
+            token_response.raise_for_status()
+            token_data = token_response.json()
+            access_token = token_data.get("accessToken")
 
-            print(f"Token exchange response status: {response.status_code}")
-            print(f"Token exchange response: {response.text}")
-
-            if response.status_code == 200:
-                token_response = response.json()
-                print(f"Access token received: {token_response}")
-
-                access_token = token_response.get("accessToken")
-                if access_token:
-                    print(f"Fetching user info with access token...")
-
-                    user_info = await auth_service.get_user_info(access_token)
-
-                    if user_info:
-                        print(f"User info received: {user_info}")
-
-                        user_id = user_info.get("id")
-
-                        if user_id:
-                            session_saved = await auth_service.save_user_session(
-                                user_id=user_id,
-                                telegram_id=state,
-                                access_token=access_token,
-                            )
-                            print(f"Session saved: {session_saved}")
-                        else:
-                            print("No user ID found in user info")
-
-                        return {
-                            "status": "success",
-                            "token_response": token_response,
-                            "user_info": user_info,
-                        }
-                    else:
-                        print("Failed to get user info")
-                        return {
-                            "status": "user_info_failed",
-                            "token_response": token_response,
-                        }
-                else:
-                    print("No access token found in response")
-                    return {
-                        "status": "no_access_token",
-                        "token_response": token_response,
-                    }
-            else:
-                print(
-                    f"Token exchange failed: {response.status_code} - {response.text}"
-                )
-                return {
-                    "status": "token_exchange_failed",
-                    "status_code": response.status_code,
-                    "response": response.text,
-                }
-
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            f"Token exchange failed: {e.response.status_code} - {e.response.text}"
+        )
+        return {
+            "status": "error",
+            "message": "Token exchange failed.",
+            "details": e.response.text,
+        }
     except Exception as e:
-        print(f"Error during token exchange: {e}")
-        return {"status": "error", "message": str(e)}
+        logger.error(
+            f"An unexpected error occurred during token exchange: {e}", exc_info=True
+        )
+        return {"status": "error", "message": "An unexpected error occurred."}
+
+    if access_token:
+        logger.info(f"Successfully obtained access token for user {telegram_id}")
+        await auth_service.clear_pkce_verifier(telegram_id)
+
+        user_info = await auth_service.get_user_info(access_token)
+        if user_info and "id" in user_info:
+            await auth_service.save_user_session(
+                user_id=user_info["id"],
+                telegram_id=telegram_id,
+                access_token=access_token,
+            )
+            bot_username = (await request.app.state.tg_app.bot.get_me()).username
+            return RedirectResponse(f"https://t.me/{bot_username}?start=auth_success")
+        else:
+            logger.error(
+                f"Failed to get user info for user {telegram_id} after successful token exchange."
+            )
+            return {"status": "error", "message": "Could not retrieve user profile."}
+    else:
+        logger.error("Token exchange was successful but no access_token was returned.")
+        return {
+            "status": "error",
+            "message": "Authentication failed: no access token in response.",
+        }
