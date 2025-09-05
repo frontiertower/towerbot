@@ -76,13 +76,15 @@ class AuthService:
                         (telegram_id,),
                     )
                     result = await cursor.fetchone()
-                    if result and result.get('code_verifier'):
-                        return result['code_verifier']
+                    if result and result.get("code_verifier"):
+                        return result["code_verifier"]
                     return None
         except Exception as e:
-            logger.error(f"Failed to retrieve PKCE verifier for user {telegram_id}: {e}")
+            logger.error(
+                f"Failed to retrieve PKCE verifier for user {telegram_id}: {e}"
+            )
             return None
-        
+
     async def clear_pkce_verifier(self, telegram_id: int):
         """
         Clears the PKCE verifier after it has been used successfully.
