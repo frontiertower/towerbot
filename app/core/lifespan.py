@@ -1,5 +1,8 @@
+import os
 import asyncio
 import logging
+import hashlib
+import base64
 
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
@@ -129,22 +132,41 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /login command to initiate OAuth flow"""
+    """Handle /login command to initiate PKCE OAuth flow"""
     user_id = update.message.from_user.id
 
     if not settings.BERLINHOUSE_BASE_URL or not settings.OAUTH_CLIENT_ID:
-        await update.message.reply_text(
-            "OAuth is not configured on this bot. Please contact the administrator."
-        )
+        await update.message.reply_text("OAuth is not configured.")
         return
 
     try:
+        # 1. Generate a secure random verifier
+        code_verifier = (
+            base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode("utf-8")
+        )
+
+        # 2. Store the verifier so the callback can use it later
+        if not await auth_service.store_pkce_verifier(user_id, code_verifier):
+            raise Exception("Failed to store PKCE verifier in the database.")
+
+        # 3. Create the SHA256 challenge
+        code_challenge = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode("utf-8")).digest()
+            )
+            .rstrip(b"=")
+            .decode("utf-8")
+        )
+
+        # 4. Build the URL with the new PKCE parameters
         oauth_url = (
             f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
             f"redirect_uri={settings.WEBHOOK_URL}/auth/callback&"
             f"scope=read&"
-            f"state={user_id}"
+            f"state={user_id}&"
+            f"code_challenge={code_challenge}&"
+            f"code_challenge_method=S256"  # Always S256 for this method
         )
 
         keyboard = [
@@ -154,22 +176,19 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             "🔐 <b>Sign In Required</b>\n\n"
-            "Click the button below to sign in with your Frontier Tower account.\n"
-            "This will give you access to TowerBot.\n\n"
-            "<i>⏰ This link will expire in 15 minutes.</i>",
+            "Click the button below to sign in with your Frontier Tower account.",
             reply_markup=reply_markup,
             parse_mode="HTML",
         )
-
-        logger.info(f"OAuth flow initiated for user {safe_user_log(user_id)}")
+        logger.info(f"PKCE OAuth flow initiated for user {safe_user_log(user_id)}")
 
     except Exception as e:
         logger.error(
-            f"Failed to generate OAuth flow for user {safe_user_log(user_id)}: {e}"
+            f"Failed to generate OAuth flow for user {safe_user_log(user_id)}: {e}",
+            exc_info=True,
         )
         await update.message.reply_text(
-            "❌ Sorry, there was an error generating the authorization link. "
-            "Please try again later."
+            "❌ Sorry, there was an error. Please try again later."
         )
 
 

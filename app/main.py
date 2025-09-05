@@ -2,6 +2,8 @@ import httpx
 import logging
 import sentry_sdk
 
+from typing import Optional
+
 from telegram import Update
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, BackgroundTasks, Query
@@ -71,12 +73,27 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
 
 
 @app.get("/auth/callback")
-async def oauth_callback_debug(code: str, state: str, error: str):
-    print(f"code: {code}")
-    print(f"state: {state}")
+async def handle_oauth_callback(
+    request: Request,
+    code: str = Query(...),
+    state: str = Query(...),
+    error: Optional[str] = Query(None),
+):
     if error:
-        print(f"error: {error}")
+        logger.error(f"OAuth error for user {state}: {error}")
         return {"status": "error", "error": error}
+
+    telegram_id = state
+
+    code_verifier = await auth_service.get_pkce_verifier(telegram_id)
+    if not code_verifier:
+        logger.error(
+            f"Could not find PKCE code_verifier for user {telegram_id}. Session may have expired."
+        )
+        return {
+            "status": "error",
+            "message": "Authentication session expired. Please try logging in again.",
+        }
 
     data = {
         "grant_type": "authorization_code",
@@ -84,18 +101,10 @@ async def oauth_callback_debug(code: str, state: str, error: str):
         "redirect_uri": f"{settings.WEBHOOK_URL}/auth/callback",
         "client_id": settings.OAUTH_CLIENT_ID,
         "client_secret": settings.OAUTH_CLIENT_SECRET,
+        "code_verifier": code_verifier,
     }
 
     token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
-
-    # token_data = {
-    #     "grant_type": "refresh_token",
-    #     "code": code,
-    #     "refresh_token": YOUR_REFRESH_TOKEN,
-    #     "redirect_uri": f"{settings.WEBHOOK_URL}/auth/callback",
-    #     "client_id": settings.OAUTH_CLIENT_ID,
-    #     "client_secret": settings.OAUTH_CLIENT_SECRET,
-    # }
 
     try:
         async with httpx.AsyncClient() as client:
