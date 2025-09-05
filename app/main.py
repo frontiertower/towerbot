@@ -83,9 +83,10 @@ async def handle_oauth_callback(
         logger.error(f"OAuth error for user {state}: {error}")
         return {"status": "error", "error": error}
 
-    telegram_id = state
+    telegram_id = int(state)
 
-    code_verifier = await auth_service.get_pkce_verifier(telegram_id)
+    # code_verifier = await auth_service.get_pkce_verifier(telegram_id)
+    code_verifier = await auth_service.get_pkce_verifier_for_debug(telegram_id)
     if not code_verifier:
         logger.error(
             f"Could not find PKCE code_verifier for user {telegram_id}. Session may have expired."
@@ -94,6 +95,9 @@ async def handle_oauth_callback(
             "status": "error",
             "message": "Authentication session expired. Please try logging in again.",
         }
+    
+    if access_token:
+        await auth_service.clear_pkce_verifier(telegram_id)
 
     data = {
         "grant_type": "authorization_code",
