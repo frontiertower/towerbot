@@ -177,7 +177,7 @@ class AuthService:
         headers = {"Authorization": f"Bearer {access_token}"}
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=False) as client:
                 response = await client.get(
                     f"{settings.BERLINHOUSE_BASE_URL}/auth/users/me/", headers=headers
                 )
