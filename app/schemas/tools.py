@@ -1,8 +1,9 @@
-
 from enum import Enum
-from typing import List, Optional, Union
+
 from pydantic import BaseModel, Field
+from typing import List, Optional, Union
 from app.schemas.generated_enums import NodeTypeEnum, EdgeTypeEnum
+
 
 class SearchRecipeEnum(str, Enum):
     COMBINED_HYBRID_SEARCH_MMR = "COMBINED_HYBRID_SEARCH_MMR"
@@ -20,6 +21,7 @@ class SearchRecipeEnum(str, Enum):
     COMMUNITY_HYBRID_SEARCH_RRF = "COMMUNITY_HYBRID_SEARCH_RRF"
     COMMUNITY_HYBRID_SEARCH_MMR = "COMMUNITY_HYBRID_SEARCH_MMR"
     COMMUNITY_HYBRID_SEARCH_CROSS_ENCODER = "COMMUNITY_HYBRID_SEARCH_CROSS_ENCODER"
+
 
 class SearchInputSchema(BaseModel):
     query: str = Field(..., description="The full message to search the graph")
@@ -55,13 +57,13 @@ class SearchInputSchema(BaseModel):
             "Benefit: Prioritizes information based on recent mentions in a sequence or 'episode.'\n"
             "- EDGE_HYBRID_SEARCH_EPISODE_MENTIONS: Find relationships relevant to a specific moment or conversation.\n"
             "- NODE_HYBRID_SEARCH_EPISODE_MENTIONS: Find entities relevant to a specific moment or conversation."
-        )
+        ),
     )
     edge_types: Optional[List[Union[str, EdgeTypeEnum]]] = Field(
         default=None,
-        description="Array of edge types to filter by, e.g. ['WORKS_ON', 'ATTENDS']. Accepts both enum values and string literals."
+        description="Array of edge types to filter by, e.g. ['WORKS_ON', 'ATTENDS']. Accepts both enum values and string literals.",
     )
     node_labels: Optional[List[Union[str, NodeTypeEnum]]] = Field(
         default=None,
-        description="Array of node types to filter by, e.g. ['User', 'Floor']. Accepts both enum values and string literals."
+        description="Array of node types to filter by, e.g. ['User', 'Floor']. Accepts both enum values and string literals.",
     )

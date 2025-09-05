@@ -26,7 +26,12 @@ from graphiti_core.search.search_config_recipes import (
 
 from app.core.config import settings
 from app.services.graph import get_graphiti_client
-from app.schemas.tools import SearchInputSchema, NodeTypeEnum, EdgeTypeEnum, SearchRecipeEnum
+from app.schemas.tools import (
+    SearchInputSchema,
+    NodeTypeEnum,
+    EdgeTypeEnum,
+    SearchRecipeEnum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +52,7 @@ SEARCH_RECIPE_MAP = {
     SearchRecipeEnum.COMMUNITY_HYBRID_SEARCH_MMR: COMMUNITY_HYBRID_SEARCH_MMR,
 }
 
+
 @tool("get_calendar_events", parse_docstring=True)
 async def get_calendar_events():
     """
@@ -65,11 +71,16 @@ async def get_calendar_events():
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:
-        logger.error(f"Luma API HTTP error: {e.response.status_code} - {e.response.text}")
-        raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
+        logger.error(
+            f"Luma API HTTP error: {e.response.status_code} - {e.response.text}"
+        )
+        raise Exception(
+            f"API Error: {e.response.status_code} - {e.response.text}"
+        ) from e
     except httpx.RequestError as e:
         logger.error(f"Luma API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
+
 
 @tool("get_tower_communities", parse_docstring=True)
 async def get_tower_communities(search: Optional[str] = None):
@@ -87,7 +98,7 @@ async def get_tower_communities(search: Optional[str] = None):
     """
     headers = {
         "X-API-Key": settings.BERLINHOUSE_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     try:
         async with httpx.AsyncClient(verify=False) as client:
@@ -100,8 +111,12 @@ async def get_tower_communities(search: Optional[str] = None):
             communities = response.json()
             return communities
     except httpx.HTTPStatusError as e:
-        logger.error(f"BerlinHouse communities API HTTP error: {e.response.status_code} - {e.response.text}")
-        raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
+        logger.error(
+            f"BerlinHouse communities API HTTP error: {e.response.status_code} - {e.response.text}"
+        )
+        raise Exception(
+            f"API Error: {e.response.status_code} - {e.response.text}"
+        ) from e
     except httpx.RequestError as e:
         logger.error(f"BerlinHouse communities API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
@@ -128,7 +143,7 @@ async def create_supply_request(item: str, additional_info: Optional[str] = None
     """
     headers = {
         "X-API-Key": settings.BERLINHOUSE_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     try:
         async with httpx.AsyncClient(verify=False) as client:
@@ -143,11 +158,16 @@ async def create_supply_request(item: str, additional_info: Optional[str] = None
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError as e:
-        logger.error(f"BerlinHouse communities API HTTP error: {e.response.status_code} - {e.response.text}")
-        raise Exception(f"API Error: {e.response.status_code} - {e.response.text}") from e
+        logger.error(
+            f"BerlinHouse communities API HTTP error: {e.response.status_code} - {e.response.text}"
+        )
+        raise Exception(
+            f"API Error: {e.response.status_code} - {e.response.text}"
+        ) from e
     except httpx.RequestError as e:
         logger.error(f"BerlinHouse communities API request error: {e}")
         raise Exception(f"API Request Error: {e}") from e
+
 
 @tool("get_tower_info", parse_docstring=True)
 def get_tower_info():
@@ -165,7 +185,7 @@ def get_tower_info():
     json_file_path = project_root / "static" / "data" / "tower.json"
 
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as f:
+        with open(json_file_path, "r", encoding="utf-8") as f:
             tower_data = json.load(f)
         logger.debug(f"Tower data loaded from {json_file_path}")
         return tower_data
@@ -186,12 +206,12 @@ async def get_connections(
 ):
     """
     Searches the graph for connection opportunities based on a query, leveraging message context.
-    
+
     Uses combined hybrid search with cross-encoder by default to capture context from messages
     and episodes, providing better hit rates for finding relevant connections between people.
     """
     graphiti = get_graphiti_client()
-    
+
     if recipe and recipe in SEARCH_RECIPE_MAP:
         search_config = SEARCH_RECIPE_MAP[recipe].model_copy(deep=True)
     else:
@@ -207,9 +227,7 @@ async def get_connections(
         )
 
     return await graphiti.search_(
-        query=query,
-        config=search_config,
-        search_filter=search_filter
+        query=query, config=search_config, search_filter=search_filter
     )
 
 
@@ -218,21 +236,23 @@ def get_qa_agent_tools():
         get_tower_info,
         get_calendar_events,
     ]
-    
+
     if settings.BERLINHOUSE_API_KEY and settings.BERLINHOUSE_BASE_URL:
         tools.append(get_tower_communities)
-    
+
     return tools
+
 
 def get_connect_agent_tools():
     return [
         get_connections,
     ]
 
+
 def get_request_agent_tools():
     tools = []
-    
+
     if settings.BERLINHOUSE_API_KEY and settings.BERLINHOUSE_BASE_URL:
         tools.append(create_supply_request)
-    
+
     return tools

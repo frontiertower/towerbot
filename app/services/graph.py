@@ -1,4 +1,3 @@
-
 import logging
 
 from datetime import timezone
@@ -14,11 +13,25 @@ from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerCli
 from app.core.config import settings
 from app.schemas.generated_enums import EDGE_TYPE_MAP, NodeTypeEnum, EdgeTypeEnum
 from app.schemas.ontology import (
-    User, Topic, Message, Sent, InReplyTo, SentIn, 
-    Event, Interest, Project, WorksOn, LocatedOn, Attends, InterestedIn, Floor, RelatedTo
+    User,
+    Topic,
+    Message,
+    Sent,
+    InReplyTo,
+    SentIn,
+    Event,
+    Interest,
+    Project,
+    WorksOn,
+    LocatedOn,
+    Attends,
+    InterestedIn,
+    Floor,
+    RelatedTo,
 )
 
 logger = logging.getLogger(__name__)
+
 
 def get_graphiti_client():
     neo4j_uri = settings.NEO4J_URI
@@ -26,11 +39,7 @@ def get_graphiti_client():
     neo4j_password = settings.NEO4J_PASSWORD
 
     if settings.OPENAI_API_KEY:
-        return Graphiti(
-            neo4j_uri,
-            neo4j_user,
-            neo4j_password
-        )
+        return Graphiti(neo4j_uri, neo4j_user, neo4j_password)
     else:
         api_key = settings.AZURE_OPENAI_API_KEY
         api_version = settings.AZURE_OPENAI_API_VERSION
@@ -42,15 +51,11 @@ def get_graphiti_client():
         embedding_model = settings.EMBEDDING_MODEL
 
         llm_client_azure = AsyncAzureOpenAI(
-            api_key=api_key,
-            api_version=api_version,
-            azure_endpoint=llm_endpoint
+            api_key=api_key, api_version=api_version, azure_endpoint=llm_endpoint
         )
 
         embedding_client_azure = AsyncAzureOpenAI(
-            api_key=api_key,
-            api_version=api_version,
-            azure_endpoint=embedding_endpoint
+            api_key=api_key, api_version=api_version, azure_endpoint=embedding_endpoint
         )
 
         azure_llm_config = LLMConfig(
@@ -62,23 +67,17 @@ def get_graphiti_client():
             neo4j_uri,
             neo4j_user,
             neo4j_password,
-            llm_client=OpenAIClient(
-                config=azure_llm_config,
-                client=llm_client_azure
-            ),
+            llm_client=OpenAIClient(config=azure_llm_config, client=llm_client_azure),
             embedder=OpenAIEmbedder(
-                config=OpenAIEmbedderConfig(
-                    embedding_model=embedding_model
-                ),
-                client=embedding_client_azure
+                config=OpenAIEmbedderConfig(embedding_model=embedding_model),
+                client=embedding_client_azure,
             ),
             cross_encoder=OpenAIRerankerClient(
-                config=LLMConfig(
-                    model=azure_llm_config.small_model
-                ),
-                client=llm_client_azure
-            )
+                config=LLMConfig(model=azure_llm_config.small_model),
+                client=llm_client_azure,
+            ),
         )
+
 
 class GraphService:
     def __init__(self):
@@ -90,7 +89,7 @@ class GraphService:
             NodeTypeEnum.Event.value: Event,
             NodeTypeEnum.Interest.value: Interest,
             NodeTypeEnum.Project.value: Project,
-            NodeTypeEnum.Floor.value: Floor
+            NodeTypeEnum.Floor.value: Floor,
         }
         self.edge_types = {
             EdgeTypeEnum.Sent.value: Sent,
@@ -128,10 +127,7 @@ class GraphService:
         RETURN n.user_id
         LIMIT 1
         """
-        result = await self.graphiti.driver.execute_query(
-            cypher,
-            user_id=user_id
-        )
+        result = await self.graphiti.driver.execute_query(cypher, user_id=user_id)
 
         records = getattr(result, "records", None)
         if records is not None:
@@ -159,8 +155,7 @@ class GraphService:
     async def reprocess_all_episodes(self):
         try:
             episodes = await EpisodicNode.get_by_group_ids(
-                self.graphiti.driver,
-                group_ids=[str(settings.GROUP_ID)]
+                self.graphiti.driver, group_ids=[str(settings.GROUP_ID)]
             )
 
             await self.graphiti.add_episode_bulk(
@@ -174,5 +169,6 @@ class GraphService:
         except Exception as e:
             logger.error(f"Failed to reprocess episodes: {e}")
             raise
+
 
 graph_service = GraphService()

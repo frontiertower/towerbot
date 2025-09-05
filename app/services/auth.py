@@ -1,70 +1,97 @@
-
 import logging
 from typing import Optional
-from fastapi import HTTPException, Security, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import httpx
+
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
+from fastapi import HTTPException, Security, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
+
 class AuthService:
-    
     def __init__(self):
         self._pool: Optional[AsyncConnectionPool] = None
-    
-    def set_database_pool(self, pool: AsyncConnectionPool) -> None:
+
+    def set_database_pool(self, pool: AsyncConnectionPool):
         self._pool = pool
         logger.info("Database pool set for AuthService")
-    
-    async def require_api_key(
-        self,
-        cred: HTTPAuthorizationCredentials = Security(bearer_scheme),
-    ) -> dict:
-        if cred is None or cred.scheme.lower() != "bearer":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing bearer token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        token = cred.credentials
 
+    async def check_user_has_session(self, user_id: int):
+        """Check if user has a valid session (returns True/False without raising exceptions)"""
         if self._pool is None:
-            logger.error("Database pool not available for authentication")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database connection not available",
-            )
+            logger.error("Database pool not available")
+            return False
 
         try:
             async with self._pool.connection() as conn:
                 conn.row_factory = dict_row
                 async with conn.cursor() as cursor:
                     await cursor.execute(
-                        "SELECT * FROM keys WHERE key = %s",
-                        (token,)
+                        """
+                        SELECT 1 FROM sessions 
+                        WHERE user_id = %s 
+                        AND (expires_at IS NULL OR expires_at > NOW())
+                        LIMIT 1
+                        """,
+                        (user_id,),
                     )
-                    key_row = await cursor.fetchone()
-            
-            if not key_row:
-                logger.warning(f"Invalid API key attempted: {token[:8]}...")
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid API key",
-                )
-            
-            logger.debug(f"Valid API key used: {token[:8]}...")
-            return key_row
-            
-        except HTTPException:
-            raise
+                    result = await cursor.fetchone()
+                    return result is not None
+
         except Exception as e:
-            logger.error(f"Database error during API key validation: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database error during authentication",
-            )
+            logger.error(f"Database error checking user session: {e}")
+            return False
+
+    async def save_user_session(
+        self, user_id: int, telegram_id: int, access_token: str
+    ):
+        """Save user session to the sessions table"""
+        if self._pool is None:
+            logger.error("Database pool not available")
+            return False
+
+        try:
+            async with self._pool.connection() as conn:
+                conn.row_factory = dict_row
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        """
+                        INSERT INTO sessions (user_id, telegram_id, access_token)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (user_id) 
+                        DO UPDATE SET 
+                            access_token = EXCLUDED.access_token,
+                            telegram_id = EXCLUDED.telegram_id,
+                        """,
+                        (user_id, telegram_id, access_token),
+                    )
+
+            logger.info(f"Session saved for user {user_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Database error saving user session: {e}")
+            return False
+
+    async def get_user_info(self, access_token: str):
+        """Get user info from BerlinHouse API using access token"""
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{settings.BERLINHOUSE_BASE_URL}/auth/users/me/", headers=headers
+                )
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error fetching user info: {e}")
+            return {}
+
 
 auth_service = AuthService()
