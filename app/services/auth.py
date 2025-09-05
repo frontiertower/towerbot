@@ -51,7 +51,9 @@ class AuthService:
             logger.info(f"Stored PKCE verifier for user {telegram_id}")
             return True
         except Exception as e:
-            logger.error(f"Database error storing PKCE verifier for user {telegram_id}: {e}")
+            logger.error(
+                f"Database error storing PKCE verifier for user {telegram_id}: {e}"
+            )
             return False
 
     async def get_pkce_verifier(self, user_id: int) -> Optional[str]:
@@ -83,7 +85,7 @@ class AuthService:
         except Exception as e:
             logger.error(f"Failed to retrieve PKCE verifier for user {user_id}: {e}")
             return None
-        
+
     async def get_pkce_verifier_for_debug(self, telegram_id: int) -> Optional[str]:
         """
         Non-destructively retrieves the PKCE verifier for debugging.
@@ -94,7 +96,9 @@ class AuthService:
         Returns:
             Optional[str]: The PKCE code_verifier if found, else None.
         """
-        logger.info(f"DEBUG: Attempting to retrieve PKCE verifier for telegram_id {telegram_id}")
+        logger.info(
+            f"DEBUG: Attempting to retrieve PKCE verifier for telegram_id {telegram_id}"
+        )
         if self._pool is None:
             return None
         try:
@@ -109,14 +113,16 @@ class AuthService:
                     result = await cursor.fetchone()
                     if result:
                         logger.info(f"DEBUG: Found verifier for {telegram_id}")
-                        return result['code_verifier']
+                        return result["code_verifier"]
                     else:
                         logger.warning(f"DEBUG: No verifier found for {telegram_id}")
                         return None
         except Exception as e:
-            logger.error(f"DEBUG: Failed to retrieve PKCE verifier for user {telegram_id}: {e}")
+            logger.error(
+                f"DEBUG: Failed to retrieve PKCE verifier for user {telegram_id}: {e}"
+            )
             return None
-        
+
     async def clear_pkce_verifier(self, telegram_id: int):
         """
         Clears the PKCE verifier after it has been used.
