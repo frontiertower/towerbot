@@ -22,6 +22,70 @@ class AuthService:
         self._pool = pool
         logger.info("Database pool set for AuthService")
 
+    async def store_pkce_verifier(self, user_id: int, code_verifier: str):
+        """
+        Store the PKCE code_verifier for the user's session.
+
+        Args:
+            user_id (int): The Telegram user ID.
+            code_verifier (str): The PKCE code verifier to store.
+
+        Returns:
+            bool: True if stored successfully, False otherwise.
+        """
+        if self._pool is None:
+            logger.error("Database pool not available for storing PKCE verifier")
+            return False
+        try:
+            async with self._pool.connection() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        """
+                        INSERT INTO sessions (telegram_id, code_verifier)
+                        VALUES (%s, %s)
+                        ON CONFLICT (telegram_id)
+                        DO UPDATE SET code_verifier = EXCLUDED.code_verifier
+                        """,
+                        (user_id, code_verifier),
+                    )
+            logger.info(f"Stored PKCE verifier for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(
+                f"Database error storing PKCE verifier for user {user_id}: {e}"
+            )
+            return False
+
+    async def get_pkce_verifier(self, user_id: int) -> Optional[str]:
+        """
+        Retrieve and clear the PKCE code_verifier for a given user.
+
+        Args:
+            user_id (int): The Telegram user ID.
+
+        Returns:
+            Optional[str]: The PKCE code_verifier if found, else None.
+        """
+        if self._pool is None:
+            return None
+        try:
+            async with self._pool.connection() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        """
+                        UPDATE sessions
+                        SET code_verifier = NULL
+                        WHERE telegram_id = %s
+                        RETURNING code_verifier;
+                        """,
+                        (user_id,),
+                    )
+                    result = await cursor.fetchone()
+                    return result["code_verifier"] if result else None
+        except Exception as e:
+            logger.error(f"Failed to retrieve PKCE verifier for user {user_id}: {e}")
+            return None
+
     async def check_user_has_session(self, user_id: int):
         """Check if user has a valid session (returns True/False without raising exceptions)"""
         if self._pool is None:
