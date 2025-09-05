@@ -78,15 +78,15 @@ async def oauth_callback_debug(code: str, state: str, error: str):
         print(f"error: {error}")
         return {"status": "error", "error": error}
 
-    token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
-
-    token_data = {
+    data = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": f"{settings.WEBHOOK_URL}/auth/callback",
         "client_id": settings.OAUTH_CLIENT_ID,
         "client_secret": settings.OAUTH_CLIENT_SECRET,
     }
+
+    token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
 
     # token_data = {
     #     "grant_type": "refresh_token",
@@ -101,7 +101,7 @@ async def oauth_callback_debug(code: str, state: str, error: str):
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 token_url,
-                data=token_data,
+                data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
 
