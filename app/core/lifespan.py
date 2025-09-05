@@ -192,6 +192,71 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def handle_login_direct_message(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int
+):
+    """Handle login requirement by sending direct message to user"""
+    if not settings.BERLINHOUSE_BASE_URL or not settings.OAUTH_CLIENT_ID:
+        await context.bot.send_message(chat_id=user_id, text="OAuth is not configured.")
+        return
+
+    try:
+        # 1. Generate a secure random verifier
+        code_verifier = (
+            base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode("utf-8")
+        )
+
+        # 2. Store the verifier so the callback can use it later
+        if not await auth_service.store_pkce_verifier(user_id, code_verifier):
+            raise Exception("Failed to store PKCE verifier in the database.")
+
+        # 3. Create the SHA256 challenge
+        code_challenge = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode("utf-8")).digest()
+            )
+            .rstrip(b"=")
+            .decode("utf-8")
+        )
+
+        # 4. Build the URL with the new PKCE parameters
+        oauth_url = (
+            f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
+            f"client_id={settings.OAUTH_CLIENT_ID}&"
+            f"redirect_uri={settings.WEBHOOK_URL}/auth/callback&"
+            f"scope=read&"
+            f"state={user_id}&"
+            f"code_challenge={code_challenge}&"
+            f"code_challenge_method=S256"  # Always S256 for this method
+        )
+
+        keyboard = [
+            [InlineKeyboardButton("🏢 Sign in with Frontier Tower", url=oauth_url)]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="🔐 <b>Sign In Required</b>\n\n"
+            "Click the button below to sign in with your Frontier Tower account.",
+            reply_markup=reply_markup,
+            parse_mode="HTML",
+        )
+        logger.info(
+            f"PKCE OAuth flow initiated for user {safe_user_log(user_id)} via direct message"
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Failed to generate OAuth flow for user {safe_user_log(user_id)}: {e}",
+            exc_info=True,
+        )
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Sorry, there was an error. Please try again later.",
+        )
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_valid_text_message(update):
         return
@@ -239,7 +304,7 @@ async def handle_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if settings.OAUTH_CLIENT_ID and settings.OAUTH_CLIENT_SECRET:
         if not await auth_service.check_user_has_session(user_id):
-            await handle_login(update, context)
+            await handle_login_direct_message(update, context, user_id)
             return
 
     full_command = update.message.text.split()[0][1:]
