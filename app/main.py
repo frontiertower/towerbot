@@ -114,12 +114,9 @@ async def handle_oauth_callback(
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
 
-            logger.info(f"Token exchange response status: {token_response.status_code}")
-            logger.info(f"Token exchange response body: {token_response.text}")
-
             token_response.raise_for_status()
             token_data = token_response.json()
-            access_token = token_data.get("accessToken")
+            access_token = token_data.get("access_token")
 
     except httpx.HTTPStatusError as e:
         logger.error(
