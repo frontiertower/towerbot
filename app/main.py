@@ -141,6 +141,7 @@ async def handle_oauth_callback(
         logger.info(f"Successfully obtained access token for user {telegram_id}")
         await auth_service.clear_pkce_verifier(telegram_id)
         user_info = await auth_service.get_user_info(access_token)
+        logger.info(f"User info: {user_info}")
         if user_info and "id" in user_info:
             logger.info(f"Successfully fetched user info for user_id {user_info['id']}")
             await auth_service.save_user_session(
@@ -148,8 +149,7 @@ async def handle_oauth_callback(
                 telegram_id=telegram_id,
                 access_token=access_token,
             )
-            bot_username = (await request.app.state.tg_app.bot.get_me()).username
-            return RedirectResponse(f"https://t.me/{bot_username}?start=auth_success")
+            return RedirectResponse("https://t.me/+KeON79EB5YQyOTUy")
         else:
             logger.error(
                 f"Failed to get user info for user {telegram_id} after successful token exchange."
