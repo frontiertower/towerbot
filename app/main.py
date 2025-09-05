@@ -70,7 +70,7 @@ async def handle_telegram_update(request: Request, background_tasks: BackgroundT
         raise
 
 
-@app.get("/callback")
+@app.get("/auth/callback")
 async def oauth_callback_debug(code: str, state: str, error: str):
     print(f"code: {code}")
     print(f"state: {state}")
@@ -83,7 +83,7 @@ async def oauth_callback_debug(code: str, state: str, error: str):
     token_data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": f"{settings.WEBHOOK_URL}/callback",
+        "redirect_uri": f"{settings.WEBHOOK_URL}/auth/callback",
         "client_id": settings.OAUTH_CLIENT_ID,
         "client_secret": settings.OAUTH_CLIENT_SECRET,
     }
@@ -92,7 +92,7 @@ async def oauth_callback_debug(code: str, state: str, error: str):
     #     "grant_type": "refresh_token",
     #     "code": code,
     #     "refresh_token": YOUR_REFRESH_TOKEN,
-    #     "redirect_uri": f"{settings.WEBHOOK_URL}/callback",
+    #     "redirect_uri": f"{settings.WEBHOOK_URL}/auth/callback",
     #     "client_id": settings.OAUTH_CLIENT_ID,
     #     "client_secret": settings.OAUTH_CLIENT_SECRET,
     # }

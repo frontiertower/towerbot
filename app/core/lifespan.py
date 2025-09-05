@@ -142,7 +142,7 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
         oauth_url = (
             f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
-            f"redirect_uri={settings.WEBHOOK_URL}/callback&"
+            f"redirect_uri={settings.WEBHOOK_URL}/auth/callback&"
             f"state={user_id}&"
             f"scope=read"
         )
