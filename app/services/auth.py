@@ -22,19 +22,19 @@ class AuthService:
         self._pool = pool
         logger.info("Database pool set for AuthService")
 
-    async def store_pkce_verifier(self, user_id: int, code_verifier: str):
+    async def store_pkce_verifier(self, telegram_id: int, code_verifier: str) -> bool:
         """
         Store the PKCE code_verifier for the user's session.
 
         Args:
-            user_id (int): The Telegram user ID.
-            code_verifier (str): The PKCE code verifier to store.
+            telegram_id (int): The Telegram user ID.
+            code_verifier (str): The PKCE code_verifier to store.
 
         Returns:
             bool: True if stored successfully, False otherwise.
         """
         if self._pool is None:
-            logger.error("Database pool not available for storing PKCE verifier")
+            logger.error("Database pool not set in AuthService")
             return False
         try:
             async with self._pool.connection() as conn:
@@ -46,14 +46,12 @@ class AuthService:
                         ON CONFLICT (telegram_id)
                         DO UPDATE SET code_verifier = EXCLUDED.code_verifier
                         """,
-                        (user_id, code_verifier),
+                        (telegram_id, code_verifier),
                     )
-            logger.info(f"Stored PKCE verifier for user {user_id}")
+            logger.info(f"Stored PKCE verifier for user {telegram_id}")
             return True
         except Exception as e:
-            logger.error(
-                f"Database error storing PKCE verifier for user {user_id}: {e}"
-            )
+            logger.error(f"Database error storing PKCE verifier for user {telegram_id}: {e}")
             return False
 
     async def get_pkce_verifier(self, user_id: int) -> Optional[str]:
@@ -86,20 +84,28 @@ class AuthService:
             logger.error(f"Failed to retrieve PKCE verifier for user {user_id}: {e}")
             return None
 
-    async def check_user_has_session(self, user_id: int):
-        """Check if user has a valid session (returns True/False without raising exceptions)"""
+    async def check_user_has_session(self, user_id: int) -> bool:
+        """
+        Check if user has a valid session (returns True/False without raising exceptions).
+
+        Args:
+            user_id (int): The Telegram user ID.
+
+        Returns:
+            bool: True if the user has a valid session, False otherwise.
+        """
         if self._pool is None:
             logger.error("Database pool not available")
             return False
 
         try:
             async with self._pool.connection() as conn:
-                conn.row_factory = dict_row
                 async with conn.cursor() as cursor:
                     await cursor.execute(
                         """
-                        SELECT 1 FROM sessions 
-                        WHERE user_id = %s 
+                        SELECT 1 FROM sessions
+                        WHERE telegram_id = %s
+                        AND access_token IS NOT NULL
                         AND (expires_at IS NULL OR expires_at > NOW())
                         LIMIT 1
                         """,
@@ -107,38 +113,42 @@ class AuthService:
                     )
                     result = await cursor.fetchone()
                     return result is not None
-
         except Exception as e:
             logger.error(f"Database error checking user session: {e}")
             return False
 
     async def save_user_session(
         self, user_id: int, telegram_id: int, access_token: str
-    ):
-        """Save user session to the sessions table"""
+    ) -> bool:
+        """
+        Update an existing user session with the BerlinHouse user_id and token.
+
+        Args:
+            user_id (int): The BerlinHouse user ID.
+            telegram_id (int): The Telegram user ID.
+            access_token (str): The access token to store.
+
+        Returns:
+            bool: True if the session was updated successfully, False otherwise.
+        """
         if self._pool is None:
             logger.error("Database pool not available")
             return False
-
         try:
             async with self._pool.connection() as conn:
-                conn.row_factory = dict_row
                 async with conn.cursor() as cursor:
                     await cursor.execute(
                         """
-                        INSERT INTO sessions (user_id, telegram_id, access_token)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (user_id) 
-                        DO UPDATE SET 
-                            access_token = EXCLUDED.access_token,
-                            telegram_id = EXCLUDED.telegram_id,
+                        UPDATE sessions
+                        SET user_id = %s, access_token = %s
+                        WHERE telegram_id = %s
                         """,
-                        (user_id, telegram_id, access_token),
+                        (user_id, access_token, telegram_id),
                     )
-
-            logger.info(f"Session saved for user {user_id}")
+            logger.info(
+                f"Session updated for telegram_id {telegram_id} with user_id {user_id}"
+            )
             return True
-
         except Exception as e:
             logger.error(f"Database error saving user session: {e}")
             return False
