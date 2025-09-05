@@ -78,10 +78,6 @@ async def handle_oauth_callback(
     state: str = Query(...),
     error: Optional[str] = Query(None),
 ):
-    """
-    Handles the OAuth 2.0 callback from the authentication provider.
-    This endpoint completes the PKCE flow.
-    """
     if error:
         logger.error(f"OAuth callback for user {state} failed with error: {error}")
         return {
@@ -92,13 +88,9 @@ async def handle_oauth_callback(
 
     telegram_id = int(state)
     access_token = None
-
     code_verifier = await auth_service.get_pkce_verifier(telegram_id)
     if not code_verifier:
-        logger.error(
-            f"Could not find PKCE code_verifier for user {telegram_id}. "
-            "The session may have expired or the link was already used."
-        )
+        logger.error(f"Could not find PKCE code_verifier for user {telegram_id}.")
         return {
             "status": "error",
             "message": "Authentication session expired. Please try logging in again.",
@@ -121,6 +113,10 @@ async def handle_oauth_callback(
                 data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
+
+            logger.info(f"Token exchange response status: {token_response.status_code}")
+            logger.info(f"Token exchange response body: {token_response.text}")
+
             token_response.raise_for_status()
             token_data = token_response.json()
             access_token = token_data.get("accessToken")
@@ -146,9 +142,7 @@ async def handle_oauth_callback(
 
     if access_token:
         logger.info(f"Successfully obtained access token for user {telegram_id}")
-
         await auth_service.clear_pkce_verifier(telegram_id)
-
         user_info = await auth_service.get_user_info(access_token)
         if user_info and "id" in user_info:
             logger.info(f"Successfully fetched user info for user_id {user_info['id']}")
@@ -157,7 +151,6 @@ async def handle_oauth_callback(
                 telegram_id=telegram_id,
                 access_token=access_token,
             )
-
             bot_username = (await request.app.state.tg_app.bot.get_me()).username
             return RedirectResponse(f"https://t.me/{bot_username}?start=auth_success")
         else:
