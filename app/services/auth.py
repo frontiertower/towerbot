@@ -179,7 +179,7 @@ class AuthService:
         try:
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.get(
-                    f"{settings.BERLINHOUSE_BASE_URL}/auth/users/me/", headers=headers
+                    f"{settings.BERLINHOUSE_BASE_URL}/o/userinfo/", headers=headers
                 )
                 return response.json()
         except Exception as e:
