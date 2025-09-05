@@ -87,7 +87,7 @@ async def handle_oauth_callback(
     telegram_id = int(state)
     access_token = None
 
-    code_verifier = await auth_service.get_pkce_verifier_for_debug(telegram_id)
+    code_verifier = await auth_service.get_pkce_verifier(telegram_id)
     if not code_verifier:
         logger.error(f"Could not find PKCE code_verifier for user {telegram_id}.")
         return {
@@ -103,10 +103,11 @@ async def handle_oauth_callback(
         "client_secret": settings.OAUTH_CLIENT_SECRET,
         "code_verifier": code_verifier,
     }
+
     token_url = f"{settings.BERLINHOUSE_BASE_URL}/o/token/"
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             token_response = await client.post(
                 token_url,
                 data=data,

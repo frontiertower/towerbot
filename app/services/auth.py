@@ -56,21 +56,23 @@ class AuthService:
             )
             return False
 
-    async def get_pkce_verifier(self, user_id: int) -> Optional[str]:
+    async def get_pkce_verifier(self, telegram_id: int) -> Optional[str]:
         """
-        Retrieve and clear the PKCE code_verifier for a given user.
+        Atomically retrieve and clear the PKCE code_verifier for a given user.
 
         Args:
-            user_id (int): The Telegram user ID.
+            telegram_id (int): The Telegram user ID.
 
         Returns:
-            Optional[str]: The PKCE code_verifier if found, else None.
+            Optional[str]: The PKCE code_verifier if found, otherwise None.
         """
         if self._pool is None:
+            logger.error("Database pool not available for get_pkce_verifier")
             return None
         try:
             async with self._pool.connection() as conn:
                 async with conn.cursor() as cursor:
+                    # Retrieve the verifier and set it to NULL in one transaction
                     await cursor.execute(
                         """
                         UPDATE sessions
@@ -78,72 +80,15 @@ class AuthService:
                         WHERE telegram_id = %s
                         RETURNING code_verifier;
                         """,
-                        (user_id,),
+                        (telegram_id,),
                     )
                     result = await cursor.fetchone()
                     return result["code_verifier"] if result else None
         except Exception as e:
-            logger.error(f"Failed to retrieve PKCE verifier for user {user_id}: {e}")
-            return None
-
-    async def get_pkce_verifier_for_debug(self, telegram_id: int) -> Optional[str]:
-        """
-        Non-destructively retrieves the PKCE verifier for debugging.
-
-        Args:
-            telegram_id (int): The Telegram user ID.
-
-        Returns:
-            Optional[str]: The PKCE code_verifier if found, else None.
-        """
-        logger.info(
-            f"DEBUG: Attempting to retrieve PKCE verifier for telegram_id {telegram_id}"
-        )
-        if self._pool is None:
-            return None
-        try:
-            async with self._pool.connection() as conn:
-                async with conn.cursor() as cursor:
-                    await cursor.execute(
-                        """
-                        SELECT code_verifier FROM sessions WHERE telegram_id = %s;
-                        """,
-                        (telegram_id,),
-                    )
-                    result = await cursor.fetchone()
-                    if result:
-                        logger.info(f"DEBUG: Found verifier for {telegram_id}")
-                        return result["code_verifier"]
-                    else:
-                        logger.warning(f"DEBUG: No verifier found for {telegram_id}")
-                        return None
-        except Exception as e:
             logger.error(
-                f"DEBUG: Failed to retrieve PKCE verifier for user {telegram_id}: {e}"
+                f"Failed to retrieve PKCE verifier for user {telegram_id}: {e}"
             )
             return None
-
-    async def clear_pkce_verifier(self, telegram_id: int):
-        """
-        Clears the PKCE verifier after it has been used.
-
-        Args:
-            telegram_id (int): The Telegram user ID.
-        """
-        try:
-            async with self._pool.connection() as conn:
-                async with conn.cursor() as cursor:
-                    await cursor.execute(
-                        """
-                        UPDATE sessions
-                        SET code_verifier = NULL
-                        WHERE telegram_id = %s;
-                        """,
-                        (telegram_id,),
-                    )
-            logger.info(f"Successfully cleared PKCE verifier for {telegram_id}")
-        except Exception as e:
-            logger.error(f"Failed to clear PKCE verifier for {telegram_id}: {e}")
 
     async def check_user_has_session(self, user_id: int) -> bool:
         """
