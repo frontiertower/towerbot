@@ -139,18 +139,12 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        params = {
-            "response_type": "code",
-            "client_id": settings.OAUTH_CLIENT_ID,
-            "redirect_uri": f"{settings.WEBHOOK_URL}/auth/callback",
-            "scope": "read",
-            "state": user_id,
-        }
-
         oauth_url = (
-            f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?"
-            + "&".join(f"{k}={v}" for k, v in params.items()),
-            user_id,
+            f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
+            f"client_id={settings.OAUTH_CLIENT_ID}&"
+            f"redirect_uri={settings.WEBHOOK_URL}/auth/callback&"
+            f"scope=read&"
+            f"state={user_id}"
         )
 
         keyboard = [
