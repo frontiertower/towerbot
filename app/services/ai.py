@@ -27,6 +27,7 @@ class AiService:
         self.client = Client()
         self.llm: Optional[BaseChatModel] = None
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
+        self.pending_commands: Dict[int, Dict[str, Any]] = {}
 
     def connect(
         self,
@@ -129,6 +130,50 @@ class AiService:
         response = await self.bot.ainvoke({"messages": messages}, config=config)
 
         return response["messages"][-1].content
+
+    def set_pending_command(self, user_id: int, command: str):
+        """Set a pending command for a user"""
+        self.pending_commands[user_id] = {
+            "command": command,
+            "created_at": datetime.now(),
+        }
+
+    def get_pending_command(self, user_id: int) -> Optional[str]:
+        """Get pending command for user, clearing expired ones"""
+        if user_id not in self.pending_commands:
+            return None
+        
+        pending = self.pending_commands[user_id]
+        # Clear if older than 10 minutes
+        if datetime.now() - pending["created_at"] > timedelta(minutes=10):
+            del self.pending_commands[user_id]
+            return None
+        
+        return pending["command"]
+
+    def clear_pending_command(self, user_id: int):
+        """Clear pending command for user"""
+        if user_id in self.pending_commands:
+            del self.pending_commands[user_id]
+
+    async def handle_pending_command(self, user_id: int, message: str):
+        """Handle a message when user has a pending command"""
+        command = self.get_pending_command(user_id)
+        if not command:
+            return None
+        
+        # Clear the pending command
+        self.clear_pending_command(user_id)
+        
+        # Process the message as if it was the original command with context
+        if command == "ask":
+            return await self.handle_ask(message)
+        elif command == "connect":
+            return await self.handle_connect(message)
+        elif command == "request":
+            return await self.handle_request(message)
+        
+        return None
 
 
 ai_service = AiService()
