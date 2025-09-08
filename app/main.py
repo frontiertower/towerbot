@@ -142,10 +142,11 @@ async def handle_oauth_callback(
         await auth_service.clear_pkce_verifier(telegram_id)
         user_info = await auth_service.get_user_info(access_token)
         logger.info(f"User info: {user_info}")
-        if user_info and "id" in user_info:
-            logger.info(f"Successfully fetched user info for user_id {user_info['id']}")
+        if user_info and ("id" in user_info or "sub" in user_info):
+            user_id = user_info.get("id") or user_info.get("sub")
+            logger.info(f"Successfully fetched user info for user_id {user_id}")
             await auth_service.save_user_session(
-                user_id=user_info["id"],
+                user_id=user_id,
                 telegram_id=telegram_id,
                 access_token=access_token,
             )
