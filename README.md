@@ -17,7 +17,7 @@ TowerBot is an open source, AI-powered Telegram bot for Frontier Tower citizens.
 - **AI Agents**: Specialized agents with LangGraph, memory management, and tool calling
 - **Temporal Knowledge Graph**: Community interaction tracking with Graphiti
 - **REST API**: Query the knowledge graph via `/api/v1/graph/query` endpoint
-- **Multi-tier Authentication**: Group membership + optional Soulink social proximity validation
+- **Authentication**: API key authentication for REST API access
 - **Persistent Memory**: LangMem integration for conversation context
 - **Dynamic Ontology**: Auto-generated enums and type mappings from schema definitions
 
@@ -78,7 +78,6 @@ Create `.env` file:
 ```env
 # Telegram (get from @BotFather)
 BOT_TOKEN=your-telegram-bot-token
-ALLOWED_GROUP_IDS=your-telegram-group-id
 
 # OpenAI
 OPENAI_API_KEY=your-openai-key
@@ -154,11 +153,7 @@ curl -X POST "https://your-server.com/api/v1/graph/query" \
 
 ## 🔐 Authentication
 
-**Three-tier system:**
-
-1. **Telegram Group Membership** — Users must be in allowed groups
-2. **Soulink Social Proximity** (Optional) — Shared group validation with admin
-3. **API Key Authentication** — Required for REST API access
+**API Key Authentication** — Required for REST API access
 
 ## 🧪 Development
 

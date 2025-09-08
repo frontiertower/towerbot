@@ -1,17 +1,19 @@
-
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 
 from app.schemas.generated_enums import NodeTypeEnum
 
+
 class SourceType(str, Enum):
     NOTION_KNOWLEDGE_BASE = "Notion Knowledge Base"
     VECTOR_DATABASE = "Vector Database"
 
+
 class ToolUsed(str, Enum):
     NOTION_SEARCH = "Notion Search"
     VECTOR_SEARCH = "Vector Search"
+
 
 class ConnectionCandidate(BaseModel):
     node_id: str = Field(
@@ -32,6 +34,7 @@ class ConnectionCandidate(BaseModel):
         le=1.0,
         description="Similarity/confidence score for this particular candidate.",
     )
+
 
 class QuestionResponse(BaseModel):
     answer: str = Field(
@@ -73,6 +76,7 @@ class QuestionResponse(BaseModel):
         "use_enum_values": True,
         "validate_by_name": True,
     }
+
 
 class ConnectionResponse(BaseModel):
     answer: str = Field(
