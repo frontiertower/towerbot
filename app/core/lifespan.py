@@ -163,7 +163,7 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
             f"redirect_uri={settings.WEBHOOK_URL}/auth/callback&"
-            f"scope=read&"
+            f"scope=read openid&"
             f"state={user_id}&"
             f"code_challenge={code_challenge}&"
             f"code_challenge_method=S256"  # Always S256 for this method
@@ -224,7 +224,7 @@ async def handle_login_direct_message(
             f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
             f"redirect_uri={settings.WEBHOOK_URL}/auth/callback&"
-            f"scope=read&"
+            f"scope=read openid&"
             f"state={user_id}&"
             f"code_challenge={code_challenge}&"
             f"code_challenge_method=S256"  # Always S256 for this method
