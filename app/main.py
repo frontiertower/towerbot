@@ -5,8 +5,8 @@ from typing import Optional
 
 from telegram import Update
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, BackgroundTasks, Query
 from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Request, BackgroundTasks, Query
 
 from app.core.config import settings
 from app.core.lifespan import lifespan
@@ -152,7 +152,7 @@ async def handle_oauth_callback(
                 telegram_id=telegram_id,
                 access_token=access_token,
             )
-            return RedirectResponse("https://t.me/+KeON79EB5YQyOTUy")
+            return RedirectResponse(f"https://t.me/{settings.BOT_HANDLE}")
         else:
             logger.error(
                 f"Failed to get user info for user {telegram_id} after successful token exchange."

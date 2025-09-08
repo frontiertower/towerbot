@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_ENDPOINT: Optional[str] = None
     BERLINHOUSE_API_KEY: Optional[str] = None
     BERLINHOUSE_BASE_URL: Optional[str] = None
+    BOT_HANDLE: str
     BOT_TOKEN: str
     DEFAULT_DATABASE: str
     EMBEDDING_MODEL: str
