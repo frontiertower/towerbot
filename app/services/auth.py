@@ -175,13 +175,19 @@ class AuthService:
     async def get_user_info(self, access_token: str):
         """Get user info from BerlinHouse API using access token"""
         headers = {"Authorization": f"Bearer {access_token}"}
+        url = f"{settings.BERLINHOUSE_BASE_URL}/o/userinfo/"
+        
+        print(f"Making request to: {url}")
+        print(f"With headers: {headers}")
 
         try:
             async with httpx.AsyncClient(verify=False) as client:
-                response = await client.get(
-                    f"{settings.BERLINHOUSE_BASE_URL}/o/userinfo/", headers=headers
-                )
-                return response.json()
+                response = await client.get(url, headers=headers)
+                print(f"User info response status: {response.status_code}")
+                print(f"User info response headers: {response.headers}")
+                response_data = response.json()
+                print(f"User info response data: {response_data}")
+                return response_data
         except Exception as e:
             logger.error(f"Error fetching user info: {e}")
             return {}
