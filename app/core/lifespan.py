@@ -140,16 +140,13 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        # 1. Generate a secure random verifier
         code_verifier = (
             base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode("utf-8")
         )
 
-        # 2. Store the verifier so the callback can use it later
         if not await auth_service.store_pkce_verifier(user_id, code_verifier):
             raise Exception("Failed to store PKCE verifier in the database.")
 
-        # 3. Create the SHA256 challenge
         code_challenge = (
             base64.urlsafe_b64encode(
                 hashlib.sha256(code_verifier.encode("utf-8")).digest()
@@ -158,7 +155,6 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
             .decode("utf-8")
         )
 
-        # 4. Build the URL with the new PKCE parameters
         oauth_url = (
             f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
@@ -166,7 +162,7 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"scope=read openid&"
             f"state={user_id}&"
             f"code_challenge={code_challenge}&"
-            f"code_challenge_method=S256"  # Always S256 for this method
+            f"code_challenge_method=S256"
         )
 
         keyboard = [
@@ -201,16 +197,13 @@ async def handle_login_direct_message(
         return
 
     try:
-        # 1. Generate a secure random verifier
         code_verifier = (
             base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode("utf-8")
         )
 
-        # 2. Store the verifier so the callback can use it later
         if not await auth_service.store_pkce_verifier(user_id, code_verifier):
             raise Exception("Failed to store PKCE verifier in the database.")
 
-        # 3. Create the SHA256 challenge
         code_challenge = (
             base64.urlsafe_b64encode(
                 hashlib.sha256(code_verifier.encode("utf-8")).digest()
@@ -219,7 +212,6 @@ async def handle_login_direct_message(
             .decode("utf-8")
         )
 
-        # 4. Build the URL with the new PKCE parameters
         oauth_url = (
             f"{settings.BERLINHOUSE_BASE_URL}/o/authorize/?response_type=code&"
             f"client_id={settings.OAUTH_CLIENT_ID}&"
@@ -227,7 +219,7 @@ async def handle_login_direct_message(
             f"scope=read openid&"
             f"state={user_id}&"
             f"code_challenge={code_challenge}&"
-            f"code_challenge_method=S256"  # Always S256 for this method
+            f"code_challenge_method=S256"
         )
 
         keyboard = [
