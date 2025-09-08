@@ -116,7 +116,8 @@ async def handle_oauth_callback(
 
             token_response.raise_for_status()
             token_data = token_response.json()
-            access_token = token_data.get("access_token")
+            access_token = token_data.get("accessToken")
+            print("access_token", access_token)
 
     except httpx.HTTPStatusError as e:
         logger.error(
